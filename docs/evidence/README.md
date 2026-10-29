@@ -1,6 +1,10 @@
 # Evidence chuẩn bị
 
 - `preflight-2026-10-29.json`: số liệu máy và Docker từ script chỉ đọc, ngoài sandbox.
+- `preflight-recheck-2026-10-29.json`: kiểm tra sau khi user tăng tài nguyên,
+  Docker 7.76 GiB/4 CPU, không warnings, bốn image digest inspect thành công.
+- `docker-storage-recheck-2026-10-29.json`: đường dẫn E:\Docker\WSL do user xác nhận,
+  kiểm tra thư mục/VHDX, dung lượng ổ E: và ba khóa tài nguyên WSL.
 - `manifest-*.json`: raw multi-platform manifest trả về từ Docker Hub cho tag đã chọn.
   `config/stack.json` giữ digest platform linux/amd64 bên trong manifest đó.
 - `package-metadata.json`: metadata PyPI chính thức của Airflow/provider/PySpark;

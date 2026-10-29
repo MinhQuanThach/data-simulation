@@ -10,10 +10,11 @@
 - Windows 11 Home 10.0.26200 x64, i5-1240P, 16 CPU logic, RAM 31.69 GiB.
 - Docker Desktop 4.75.0, Engine 29.5.2, Compose plugin 5.1.3, context `desktop-linux`,
   daemon Linux/amd64. Ubuntu WSL2 đã cài; đang stopped khi kiểm tra; docker-desktop running.
-- Docker đang nhận 3.83 GiB/2 CPU. Khuyến nghị đổi 8 GiB/4 CPU trước ngày 1.
-- Đã đọc riêng khóa tài nguyên .wslconfig: memory=4GB, processors=2, swap=8GB.
-  User chỉ cần sửa memory/processors, giữ swap/cấu hình khác; chưa sửa file ngoài workspace.
-- Đĩa trống: C 26.65, D 18.97, E 37.56 GiB. Chưa xác minh host path của Docker disk image.
+- User đã tăng tài nguyên; tái kiểm tra 2026-10-29: Docker nhận 7.76 GiB/4 CPU.
+- Đã đọc riêng khóa .wslconfig: memory=8GB, processors=4, swap=8GB; daemon đã áp dụng.
+  Không còn thao tác sửa môi trường thủ công bắt buộc; chưa sửa settings hệ thống trong lượt kiểm tra.
+- Đĩa trống tái kiểm tra: C 26.55, D 18.97, E 37.56 GiB.
+  User xác nhận Docker data E:\Docker\WSL; đã thấy disk/docker_data.vhdx khoảng 25.22 GiB.
 - Sandbox báo access denied với CIM, WSL, `.docker/config.json`, Docker named pipe.
   Read-only ngoài sandbox đã thành công. Không suy ra Docker bị hỏng từ lỗi sandbox.
 - Git init chạy bằng CodexSandboxOffline nên Git dưới DELL báo dubious ownership.
@@ -41,6 +42,10 @@
 - Chưa thử URL thật; chưa có run_id/application_id thực tế; chưa có block chạy cùng nhau.
 - Lệnh hiện dùng: `python scripts/check-preparation.py`,
   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preflight.ps1 -Online -InspectImages`.
-- Hai lệnh kiểm tra trên đã pass đúng phạm vi (preflight còn cảnh báo tài nguyên).
+- Hai lệnh kiểm tra trên đã pass đúng phạm vi; preflight tái kiểm tra không còn warnings.
+- Cổng 8080/8081/8082/3000 rảnh; registry/PyPI truy cập được, cả bốn image digest inspect exit 0.
+- Evidence mới: docs/evidence/preflight-recheck-2026-10-29.json và
+  docs/evidence/docker-storage-recheck-2026-10-29.json; giữ evidence ban đầu để đối chiếu.
 - Lệnh khởi động/trigger/query/dừng pipeline: chưa có, sẽ triển khai ngày 1.
-- Bước tiếp: user điều chỉnh tài nguyên Docker; kiểm tra lại; thực hiện PLAN ngày 1.
+- Bước tiếp: đủ điều kiện bắt đầu PLAN ngày 1; lượt này chỉ kiểm tra và xác nhận,
+  chưa pull/build image hoặc triển khai task ngày 1.

@@ -1,0 +1,23 @@
+{
+    "checked_at_utc":  "2026-10-29T16:35:37.8419563Z",
+    "docker_data_path":  "E:\\Docker\\WSL",
+    "path_confirmed_by":  "user",
+    "path_exists":  true,
+    "host_drive":  "E:",
+    "host_free_gib":  37.56,
+    "wsl_config":  {
+                       "memory":  "8GB",
+                       "processors":  4,
+                       "swap":  "8GB"
+                   },
+    "vhdx_files":  [
+                       {
+                           "FullName":  "E:\\Docker\\WSL\\disk\\docker_data.vhdx",
+                           "SizeGiB":  25.22
+                       },
+                       {
+                           "FullName":  "E:\\Docker\\WSL\\main\\ext4.vhdx",
+                           "SizeGiB":  0.1
+                       }
+                   ]
+}

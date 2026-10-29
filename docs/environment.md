@@ -1,27 +1,37 @@
 # Chuẩn bị môi trường Windows và Docker
 
-Kiểm tra ngày 2026-10-29 theo Asia/Saigon. Đây là số liệu quan sát, chưa chạy workload lab.
+Tái kiểm tra ngày 2026-10-29 theo Asia/Saigon sau khi user tăng tài nguyên WSL.
+**Môi trường đã đủ điều kiện bắt đầu task ngày 1; không còn thao tác sửa thủ công bắt buộc.**
+Đây là kiểm tra mức sẵn sàng; chưa pull/build image hoặc chạy workload lab.
 
 | Mục | Kết quả |
 |---|---|
 | OS | Windows 11 Home 10.0.26200, x64 |
-| CPU/RAM host | Intel i5-1240P, 16 CPU logic, RAM 31.69 GiB; free RAM lúc kiểm tra 16.62 GiB |
+| CPU/RAM host | Intel i5-1240P, 16 CPU logic, RAM 31.69 GiB; free RAM lúc tái kiểm tra 17.26 GiB |
 | Docker Desktop / Engine | 4.75.0 / 29.5.2; daemon Linux/amd64, context desktop-linux |
 | Compose | Plugin 5.1.3, lệnh `docker compose`; chưa cần cài hoặc downgrade |
 | WSL | Default version 2; Ubuntu WSL2 stopped, docker-desktop WSL2 running |
-| Docker nhận | **3.83 GiB RAM, 2 CPU** |
-| .wslconfig hiện có | `[wsl2]`: memory=4GB, processors=2, swap=8GB |
-| Đĩa trống | C: 26.65 GiB, D: 18.97 GiB, E: 37.56 GiB |
+| Docker nhận | **7.76 GiB RAM, 4 CPU**; khớp ngân sách cấu hình 8GB/4 CPU |
+| .wslconfig hiện có | `[wsl2]`: memory=8GB, processors=4, swap=8GB |
+| Đĩa trống | C: 26.55 GiB, D: 18.97 GiB, E: 37.56 GiB |
+| Docker data path | User xác nhận E:\Docker\WSL; đã kiểm tra thư mục và disk/docker_data.vhdx tồn tại |
 | Docker disk usage | Build cache 17.66 GB reclaimable; chưa dọn/xóa gì; đây không phải dung lượng trống |
 | Mạng host | Docker registry 401 auth challenge bình thường; PyPI 200; manifest image đọc được |
-| Cổng UI dự kiến | Không thấy listener 8080/8081/8082/3000 tại lúc kiểm tra; sẽ kiểm tra lại ngày 1 |
+| Cổng UI dự kiến | Không thấy listener 8080/8081/8082/3000 tại lúc tái kiểm tra |
+| Image pins | Cả bốn image theo digest kiểm tra thành công; chưa pull layers |
 | Python/Git host | Python 3.13.12, Git 2.45.0.windows.1; host Python chỉ dùng check offline |
 
 Sandbox ban đầu bị từ chối CIM, WSL, Docker config/named pipe. Các kiểm tra chỉ đọc
 ngoài sandbox thành công. Không cần sửa ACL, mở Docker TCP, cài lại Docker hoặc chạy
 mọi thứ bằng Administrator chỉ để khắc phục lỗi quyền của sandbox.
 
-## Việc bạn cần làm trước ngày 1
+## Hướng dẫn tham khảo khi cần cấu hình lại
+
+Các bước tăng tài nguyên và xác định ổ lưu trữ dưới đây đã được hoàn thành,
+không cần thực hiện lại trước ngày 1. Báo cáo mới:
+[preflight-recheck-2026-10-29.json](evidence/preflight-recheck-2026-10-29.json),
+[docker-storage-recheck-2026-10-29.json](evidence/docker-storage-recheck-2026-10-29.json).
+Báo cáo ban đầu vẫn giữ để đối chiếu trước/sau.
 
 ### 1. Tăng tài nguyên WSL cho Docker
 
@@ -50,8 +60,8 @@ trong Docker Desktop như Hyper-V.
    swap=8GB
    ```
 
-   Máy bạn đã có file với memory=4GB, processors=2, swap=8GB. Chỉ cần sửa
-   memory và processors như trên; giữ swap=8GB và các cấu hình khác đang có.
+   Máy bạn hiện đã có memory=8GB, processors=4, swap=8GB và daemon đã áp dụng.
+   Giữ swap=8GB và các cấu hình khác đang có.
 4. Quit Docker Desktop qua biểu tượng ở system tray. Sau đó chạy:
 
    ```powershell
@@ -85,7 +95,9 @@ Workspace ở D: không có nghĩa images/volumes ở D:. `/var/lib/docker` là 
 trong Linux VM, không cho biết ổ Windows. Kiểm tra Docker Desktop → Settings →
 Resources/Advanced (nếu phiên bản có mục Disk image location); nếu không thấy,
 dùng hướng dẫn [Docker WSL data location](https://docs.docker.com/desktop/features/wsl/).
-Ghi lại host drive chứa disk image và dung lượng trống của ổ đó.
+Hiện đã xác nhận ổ E:, đường dẫn `E:\Docker\WSL`; dữ liệu chính tại
+`E:\Docker\WSL\disk\docker_data.vhdx` (file hiện khoảng 25.22 GiB).
+Ổ E: còn 37.56 GiB trống, vượt ngân sách 15–20 GB tham khảo của lab.
 
 Ngân sách đặc tả là thêm khoảng 15–20 GB trống cho lab, gồm images/build cache/volumes;
 cần theo dõi sau build. D: còn 18.97 GiB, gần khoảng tham khảo; E: còn 37.56 GiB.
@@ -105,8 +117,9 @@ python scripts/check-preparation.py
 ```
 
 `ExecutionPolicy Bypass` chỉ áp dụng tiến trình PowerShell mới, không thay policy hệ thống.
-Script preflight không sửa cấu hình và không pull image layers. Thông tin cần gửi:
-Docker RAM/CPU mới, context/daemon Linux, host drive chứa Docker disk image, lỗi nếu có.
+Script preflight không sửa cấu hình và không pull image layers. Lần tái kiểm tra
+này đã xác nhận Docker RAM/CPU mới, context/daemon Linux và host drive Docker;
+không cần user gửi thêm thông tin để bắt đầu ngày 1. Khi có lỗi mới, gửi phần lỗi liên quan.
 Không gửi `.env`, password, token hay `.docker/config.json`.
 
 ## Git và ownership của sandbox

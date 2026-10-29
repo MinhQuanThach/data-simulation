@@ -4,6 +4,9 @@ Ngày cập nhật: 2026-10-29, Asia/Saigon.
 
 **Hiện tại: chuẩn bị trước ngày 1. Ngày 1–7 chưa thực hiện.**
 
+**Tái kiểm tra môi trường: ĐẠT điều kiện bắt đầu task ngày 1.**
+Không còn thao tác sửa môi trường thủ công bắt buộc từ kết quả khảo sát hiện tại.
+
 ## Đã thực hiện trong bước chuẩn bị
 
 - Đọc đặc tả và hai ảnh; giữ nguyên phạm vi bảy block, PostgreSQL/Airflow/Spark/Grafana.
@@ -23,13 +26,14 @@ Ngày cập nhật: 2026-10-29, Asia/Saigon.
 | OS/CPU/RAM | Windows 11 Home x64, 16 CPU logic, 31.69 GiB RAM | Read-only CIM ngoài sandbox; chưa đo workload |
 | Docker daemon | Hoạt động, Linux/amd64, Desktop 4.75.0, Engine 29.5.2 | docker version/info, context desktop-linux |
 | Compose/WSL | Compose plugin 5.1.3; Ubuntu và docker-desktop dùng WSL2 | Ubuntu stopped không ngăn Compose từ PowerShell |
-| Tài nguyên Docker | 3.83 GiB, 2 CPU | Cần điều chỉnh ngân sách khởi điểm 8 GiB/4 CPU |
-| Đĩa | C 26.65, D 18.97, E 37.56 GiB trống | Chưa biết host drive của disk image Docker |
+| Tài nguyên Docker | 7.76 GiB, 4 CPU | .wslconfig 8GB/4 CPU/swap 8GB đã được daemon áp dụng |
+| Đĩa | C 26.55, D 18.97, E 37.56 GiB trống | Docker data E:\Docker\WSL; thư mục và docker_data.vhdx đã xác nhận |
 | Mạng host | Registry 401 challenge; PyPI 200 | Không chứng minh mạng build/container |
 | Image nguồn | Bốn tag đã chọn có linux/amd64, digest lưu | Chỉ manifest; chưa pull image layers |
 | Dependency | Metadata provider/PySpark và constraints đã đọc | Chưa Linux resolver, pip check, import hoặc build |
 | Kiểm tra artifact offline | PASS | File cần thiết, manifest/digest/platform, checksum nguồn, pins, fixture oracle, secret placeholders |
-| PowerShell preflight | PASS có cảnh báo tài nguyên | JSON report tại docs/evidence/preflight-2026-10-29.json; bốn manifest checks exit 0 |
+| PowerShell preflight | PASS, không còn warnings | docs/evidence/preflight-recheck-2026-10-29.json; daemon/Compose/WSL và bốn manifest checks exit 0 |
+| Cổng UI | PASS | 8080/8081/8082/3000 không có listener lúc kiểm tra |
 | PowerShell syntax | PASS | Parser không báo lỗi |
 | Secret/cache Git ignore | PASS | .env/.env.local/.local/logs bị ignore; .env.example không bị ignore |
 | Nội dung file mới | PASS whitespace check | Transcript tại docs/evidence/preparation-check.txt; không sửa prompt/ảnh gốc |
@@ -48,17 +52,16 @@ và DELL; đã dùng safe.directory chỉ cho từng lệnh, không sửa global
 - Chưa kiểm tra idempotence, transaction rollback, restart persistence/cold start.
 - Source pins/constraints không được trình bày như runtime đã xác minh.
 
-## Việc user cần làm
+## Kết luận tái kiểm tra và bước tiếp theo
 
-Theo [docs/environment.md](docs/environment.md): điều chỉnh WSL2 8 GiB/4 CPU,
-restart Docker theo hướng dẫn sau khi lưu công việc, xác nhận host drive chứa
-Docker disk image và dung lượng còn trống. Không cần cài stack trực tiếp vào Windows.
-Đã xác nhận `.wslconfig` hiện tại là memory=4GB, processors=2, swap=8GB;
-chỉ cần đổi hai khóa đầu, giữ swap/cấu hình khác. Chưa thay đổi settings hệ thống.
+User đã tăng WSL lên 8GB/4 CPU và xác nhận Docker data ở E:\Docker\WSL.
+Đã kiểm tra daemon thực tế nhận 7.76 GiB/4 CPU, ổ E: còn 37.56 GiB và VHDX tồn tại;
+không còn việc sửa thủ công bắt buộc. Không thay đổi settings hệ thống trong lượt kiểm tra.
+Chi tiết tại [docs/environment.md](docs/environment.md).
 
-Phần chuẩn bị trong repository đã hoàn tất và kiểm tra trong phạm vi nêu trên.
-Điều chỉnh tài nguyên Docker và kiểm tra runtime ngày 1 vẫn đang chờ; không có
-ngày triển khai nào được đánh dấu hoàn thành từ kết quả kiểm tra artifact.
+Phần chuẩn bị đã hoàn tất. Đã đến lúc bắt đầu task ngày 1 theo PLAN;
+pull/build, dependency resolution, healthchecks, JDBC và smoke DAG sẽ được
+kiểm chứng khi triển khai ngày 1. Chưa đánh dấu ngày 1 hoàn thành.
 
 ## Lệnh chạy lại phần chuẩn bị
 
