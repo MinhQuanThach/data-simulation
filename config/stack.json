@@ -1,0 +1,30 @@
+{
+  "selected_on": "2026-10-29",
+  "status": "source_verified_runtime_pending",
+  "platform": "linux/amd64",
+  "images": {
+    "airflow": {
+      "tag": "apache/airflow:3.3.2-python3.11",
+      "digest": "sha256:4158d6893315cf7c7a81a99f423b7b443dd5454a003f87f4cb0a72748e850978"
+    },
+    "spark": {
+      "tag": "apache/spark:4.0.2-scala2.13-java17-python3-ubuntu",
+      "digest": "sha256:17dcbf3ceb10994198bd32ab8cf2944072ebb865acd00b76c6ece17ed391ffff"
+    },
+    "postgres": {
+      "tag": "postgres:16.15-bookworm",
+      "digest": "sha256:cf5d353f55240ecc2f811827a15c7d1f2d562f08019b49dca12b5a59f4ab5962"
+    },
+    "grafana": {
+      "tag": "grafana/grafana:12.4.2",
+      "digest": "sha256:9419d74cb14745b96cf7068c6c5de30851d63ee45bfbe6387d48b12e62146ea4"
+    }
+  },
+  "airflow_version": "3.3.2",
+  "spark_provider_version": "5.5.0",
+  "spark_version": "4.0.2",
+  "python_minor": "3.11",
+  "java_major": 17,
+  "jdbc_version": "42.7.14",
+  "runtime_strategy": "Shared custom runtime based on the pinned Airflow Python 3.11 image; stage Spark distribution and Java 17 from the pinned Apache Spark image. Spark worker uses this runtime too. Verify actual Python/Java patch versions at day-1 build."
+}

@@ -1,0 +1,33 @@
+{
+  "provenance": "Hand-authored local fixtures, not crawled web data",
+  "transform_version": "1.0.0",
+  "rules_version": "1.0.0",
+  "valid_vi": {
+    "file": "html/valid_vi.html",
+    "requested_url": "https://fixture.invalid/valid-vi",
+    "http_status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "title": "Fixture tiếng Việt",
+    "clean_text": "Xin chào, Việt Nam! Xin chào & dữ liệu 2026. Dữ liệu sạch.",
+    "tokens": ["xin", "chào", "việt", "nam", "xin", "chào", "dữ", "liệu", "2026", "dữ", "liệu", "sạch"],
+    "token_count": 12,
+    "word_counts": {"xin": 2, "chào": 2, "việt": 1, "nam": 1, "dữ": 2, "liệu": 2, "2026": 1, "sạch": 1},
+    "top_3": [{"word": "chào", "count": 2}, {"word": "dữ", "count": 2}, {"word": "liệu", "count": 2}]
+  },
+  "invalid_cases": [
+    {"file": "html/empty.html", "reason": "empty_clean_text"},
+    {"file": "html/script_only.html", "reason": "empty_clean_text"},
+    {"reuse_file": "html/valid_vi.html", "http_status": 404, "reason": "http_error"},
+    {"reuse_file": "html/valid_vi.html", "http_status": 200, "content_type": "application/pdf", "reason": "unsupported_content_type"}
+  ],
+  "run_cases": [
+    {"name": "one_valid", "input": 1, "valid": 1, "rejected": 0, "total_tokens": 12, "expected_status": "success"},
+    {"name": "one_valid_one_empty", "input": 2, "valid": 1, "rejected": 1, "total_tokens": 12, "expected_status": "partial"},
+    {"name": "all_invalid", "input": 2, "valid": 0, "rejected": 2, "total_tokens": 0, "expected_status": "failed"}
+  ],
+  "system_cases": [
+    {"name": "duplicate_run_page_key", "expected_status": "failed", "reason": "duplicate_key", "publish": false},
+    {"name": "retry_same_run_id", "expected_behavior": "same final rows and counts; no duplicates"},
+    {"name": "new_dag_run", "expected_behavior": "new snapshot retained under a new run_id"}
+  ]
+}

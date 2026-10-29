@@ -1,0 +1,32 @@
+{
+    "scope":  "Manifests and source metadata; no image layers pulled and no containers started",
+    "checked_on":  "2026-10-29",
+    "timezone":  "Asia/Saigon",
+    "files":  [
+                  {
+                      "path":  "requirements/constraints-upstream-py311.txt",
+                      "url":  "https://raw.githubusercontent.com/apache/airflow/constraints-3.3.2/constraints-3.11.txt",
+                      "sha256":  "f9a3a164211d2dcf3243b803995f538003e6061dbf9954622dabbe7ff606f0f7"
+                  },
+                  {
+                      "path":  "docs/evidence/manifest-airflow.json",
+                      "url":  "docker.io/apache/airflow:3.3.2-python3.11",
+                      "sha256":  "8716aa817897af129234e3b73a4cedb41ec9a0c1cb479b6f08f035ba7a628a06"
+                  },
+                  {
+                      "path":  "docs/evidence/manifest-spark.json",
+                      "url":  "docker.io/apache/spark:4.0.2-scala2.13-java17-python3-ubuntu",
+                      "sha256":  "73d3b2ea5882590ee85bc71393b45145a813ecc8e8edd7b8db95c02ffe867139"
+                  },
+                  {
+                      "path":  "docs/evidence/manifest-postgres.json",
+                      "url":  "docker.io/postgres:16.15-bookworm",
+                      "sha256":  "18fa114d724ec590206b55b3b80f4f2a0c22ba6bb3884055f7c7990d476e6cbf"
+                  },
+                  {
+                      "path":  "docs/evidence/manifest-grafana.json",
+                      "url":  "docker.io/grafana/grafana:12.4.2",
+                      "sha256":  "a0b5e7db07b2b37bc35945f78fb74c0342d4ead9c941ff7f6863e8c7fe68802d"
+                  }
+              ]
+}

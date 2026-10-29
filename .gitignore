@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.local/
+logs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.log
+*.jar
+*.pem
+*.key
+.DS_Store
+Thumbs.db
+.idea/

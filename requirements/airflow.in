@@ -1,0 +1,12 @@
+# Exact direct dependencies; install using constraints-project-py311.txt at BUILD time.
+# Full resolved lock + pip check + runtime imports are day-1 gates.
+apache-airflow==3.3.2
+apache-airflow-providers-apache-spark==5.5.0
+apache-airflow-providers-standard==1.19.0
+pyspark==4.0.2
+py4j==0.10.9.9
+beautifulsoup4==4.15.0
+soupsieve==2.9.2
+requests==2.34.2
+psycopg2-binary==2.9.13
+PyYAML==6.0.3

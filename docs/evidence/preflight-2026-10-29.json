@@ -1,0 +1,97 @@
+{
+    "checked_at_utc":  "2026-10-29T16:04:42.3396110Z",
+    "scope":  "read-only preparation; no container workload executed",
+    "powershell":  "5.1.26100.9711",
+    "process_architecture":  "AMD64",
+    "host":  {
+                 "os":  "Microsoft Windows 11 Home",
+                 "os_version":  "10.0.26200",
+                 "architecture":  "64-bit",
+                 "cpu":  "12th Gen Intel(R) Core(TM) i5-1240P",
+                 "logical_cpus":  16,
+                 "ram_gib":  31.69,
+                 "free_ram_gib":  16.58
+             },
+    "disks":  [
+                  {
+                      "drive":  "C:",
+                      "free_gib":  26.61,
+                      "size_gib":  156.49
+                  },
+                  {
+                      "drive":  "D:",
+                      "free_gib":  18.97,
+                      "size_gib":  87.95
+                  },
+                  {
+                      "drive":  "E:",
+                      "free_gib":  37.56,
+                      "size_gib":  231.38
+                  }
+              ],
+    "docker":  {
+                   "os":  "linux",
+                   "architecture":  "x86_64",
+                   "cpus":  2,
+                   "ram_gib":  3.83,
+                   "server_version":  "29.5.2"
+               },
+    "warnings":  [
+                     "Below planned Docker budget: configure approximately 8 GiB and 4 CPUs before day 1."
+                 ],
+    "docker_version":  {
+                           "exit_code":  0,
+                           "output":  "Client:\r\n Version:           29.5.2\r\n API version:       1.54\r\n Go version:        go1.26.3\r\n Git commit:        79eb04c\r\n Built:             Wed May 20 14:40:41 2026\r\n OS/Arch:           windows/amd64\r\n Context:           desktop-linux\r\n\r\nServer: Docker Desktop 4.75.0 (227598)\r\n Engine:\r\n  Version:          29.5.2\r\n  API version:      1.54 (minimum version 1.40)\r\n  Go version:       go1.26.3\r\n  Git commit:       568f755\r\n  Built:            Wed May 20 14:38:09 2026\r\n  OS/Arch:          linux/amd64\r\n  Experimental:     false\r\n containerd:\r\n  Version:          v2.2.3\r\n  GitCommit:        77c84241c7cbdd9b4eca2591793e3d4f4317c590\r\n runc:\r\n  Version:          1.3.5\r\n  GitCommit:        v1.3.5-0-g488fc13e\r\n docker-init:\r\n  Version:          0.19.0\r\n  GitCommit:        de40ad0"
+                       },
+    "compose_version":  {
+                            "exit_code":  0,
+                            "output":  "Docker Compose version v5.1.3"
+                        },
+    "docker_context":  {
+                           "exit_code":  0,
+                           "output":  "desktop-linux"
+                       },
+    "wsl_status":  {
+                       "exit_code":  0,
+                       "output":  "Default Distribution: Ubuntu\r\n\r\nDefault Version: 2"
+                   },
+    "wsl_distros":  {
+                        "exit_code":  0,
+                        "output":  "NAME              STATE           VERSION\r\n\r\n* Ubuntu            Stopped         2\r\n\r\n  docker-desktop    Running         2"
+                    },
+    "docker_disk_usage":  {
+                              "exit_code":  0,
+                              "output":  "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\r\nImages          0         0         14.77GB   0B (0%)\r\nContainers      0         0         0B        0B\r\nLocal Volumes   0         0         0B        0B\r\nBuild Cache     162       0         17.66GB   17.66GB"
+                          },
+    "listen_ports":  [
+
+                     ],
+    "network":  {
+                    "https://registry-1.docker.io/v2/":  {
+                                                             "exit_code":  0,
+                                                             "output":  "HTTP/1.1 401 Unauthorized\r\nDate: Thu, 29 Oct 2026 16:04:56 GMT\r\nContent-Type: application/json\r\nContent-Length: 87\r\nConnection: keep-alive\r\ndocker-distribution-api-version: registry/2.0\r\nwww-authenticate: Bearer realm=\"https://auth.docker.io/token\",service=\"registry.docker.io\"\r\nstrict-transport-security: max-age=31536000"
+                                                         },
+                    "https://pypi.org/simple/":  {
+                                                     "exit_code":  0,
+                                                     "output":  "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 47799635\r\naccess-control-allow-origin: *\r\nserver: gunicorn\r\ncache-control: max-age=600, public\r\nreferrer-policy: origin-when-cross-origin\r\naccess-control-expose-headers: X-PyPI-Last-Serial\r\naccess-control-max-age: 86400\r\netag: \"+ReU4M/gWltGv0F7dG5VXA\"\r\naccess-control-allow-methods: GET\r\nx-pypi-last-serial: 42863578\r\ncontent-security-policy: default-src \u0027none\u0027; sandbox allow-top-navigation\r\naccess-control-allow-headers: Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since\r\nAccept-Ranges: bytes\r\nDate: Thu, 29 Oct 2026 16:04:57 GMT\r\nX-Served-By: cache-iad-kcgs7200162-IAD, cache-iad-kcgs7270022-IAD, cache-sin-wsap440063-SIN\r\nX-Cache: MISS, HIT, HIT\r\nX-Cache-Hits: 0, 36475, 0\r\nX-Timer: S1793289897.204815,VS0,VE1\r\nContent-Type: text/html\r\nVary: Accept-Encoding, Accept\r\nStrict-Transport-Security: max-age=31536000; includeSubDomains; preload\r\nX-Frame-Options: deny\r\nX-XSS-Protection: 1; mode=block\r\nX-Content-Type-Options: nosniff\r\nX-Permitted-Cross-Domain-Policies: none\r\nPermissions-Policy: publickey-credentials-create=(self),publickey-credentials-get=(self),accelerometer=(),ambient-light-sensor=(),autoplay=(),battery=(),camera=(),display-capture=(),document-domain=(),encrypted-media=(),execution-while-not-rendered=(),execution-while-out-of-viewport=(),fullscreen=(),gamepad=(),geolocation=(),gyroscope=(),hid=(),identity-credentials-get=(),idle-detection=(),local-fonts=(),magnetometer=(),microphone=(),midi=(),otp-credentials=(),payment=(),picture-in-picture=(),screen-wake-lock=(),serial=(),speaker-selection=(),storage-access=(),usb=(),web-share=(),xr-spatial-tracking=()"
+                                                 }
+                },
+    "image_checks":  {
+                         "airflow":  {
+                                         "exit_code":  0,
+                                         "output":  "Name:      docker.io/apache/airflow:3.3.2-python3.11@sha256:4158d6893315cf7c7a81a99f423b7b443dd5454a003f87f4cb0a72748e850978\r\nMediaType: application/vnd.oci.image.manifest.v1+json\r\nDigest:    sha256:4158d6893315cf7c7a81a99f423b7b443dd5454a003f87f4cb0a72748e850978"
+                                     },
+                         "spark":  {
+                                       "exit_code":  0,
+                                       "output":  "Name:      docker.io/apache/spark:4.0.2-scala2.13-java17-python3-ubuntu@sha256:17dcbf3ceb10994198bd32ab8cf2944072ebb865acd00b76c6ece17ed391ffff\r\nMediaType: application/vnd.oci.image.manifest.v1+json\r\nDigest:    sha256:17dcbf3ceb10994198bd32ab8cf2944072ebb865acd00b76c6ece17ed391ffff"
+                                   },
+                         "postgres":  {
+                                          "exit_code":  0,
+                                          "output":  "Name:      docker.io/library/postgres:16.15-bookworm@sha256:cf5d353f55240ecc2f811827a15c7d1f2d562f08019b49dca12b5a59f4ab5962\r\nMediaType: application/vnd.oci.image.manifest.v1+json\r\nDigest:    sha256:cf5d353f55240ecc2f811827a15c7d1f2d562f08019b49dca12b5a59f4ab5962"
+                                      },
+                         "grafana":  {
+                                         "exit_code":  0,
+                                         "output":  "Name:      docker.io/grafana/grafana:12.4.2@sha256:9419d74cb14745b96cf7068c6c5de30851d63ee45bfbe6387d48b12e62146ea4\r\nMediaType: application/vnd.docker.distribution.manifest.v2+json\r\nDigest:    sha256:9419d74cb14745b96cf7068c6c5de30851d63ee45bfbe6387d48b12e62146ea4"
+                                     }
+                     }
+}

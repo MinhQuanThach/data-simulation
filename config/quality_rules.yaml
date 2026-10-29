@@ -1,0 +1,37 @@
+# Design contract; the Spark rules reader is implemented on day 4.
+rules_version: "1.0.0"
+transform_version: "1.0.0"
+extraction:
+  parser: html.parser
+  text_scope: body
+  remove_elements: [script, style, noscript, template]
+  unicode_normalization: NFC
+  collapse_whitespace: true
+tokenization:
+  lowercase: true
+  # Runs of Unicode letters or decimal digits; punctuation/underscore split.
+  unicode_categories: [L, Nd]
+  keep_numbers: true
+  remove_stop_words: false
+  stemming: false
+  lemmatization: false
+checks:
+  required_fields: [page_id, source_url]
+  http_status_min: 200
+  http_status_max: 299
+  supported_content_types: [text/html, application/xhtml+xml]
+  require_body: true
+  require_nonempty_clean_text: true
+  min_token_count: 1
+  duplicate_key_policy: fail_run
+  require_input_equals_valid_plus_rejected: true
+  require_positive_word_counts: true
+  require_word_count_sum_equals_token_count: true
+publish:
+  partial_valid: publish_valid_with_partial_status
+  all_invalid: fail_without_publish
+  system_failure: fail_without_publish
+display:
+  default_top_n: 10
+  max_top_n: 100
+  order: [count_desc, word_asc]

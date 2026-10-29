@@ -1,0 +1,15 @@
+# Proposed catalog records; registration code is implemented on day 5.
+schema_version: "1.0.0"
+datasets:
+  - dataset_name: bronze.web_pages
+    owner: integration
+    description: HTML source and HTTP metadata; immutable snapshot per run/page.
+  - dataset_name: silver.documents
+    owner: data_model
+    description: Validated normalized body text with a reference to Bronze.
+  - dataset_name: demo.word_counts
+    owner: data_ops
+    description: Complete per-page token frequencies derived from Silver.
+  - dataset_name: quarantine.rejected_pages
+    owner: data_governance
+    description: Rejected page identity and reason, referencing Bronze.

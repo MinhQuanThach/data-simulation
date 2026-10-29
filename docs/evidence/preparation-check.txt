@@ -1,0 +1,7 @@
+PASS: required artifacts, image platform/digest evidence, source checksums, pins, manual fixture oracle, secret placeholders
+NOT TESTED: Linux dependency resolution, image pull/build, JDBC, Airflow DAG, Spark executors, web crawl, publish/retry
+PASS: PowerShell parser
+PASS: whitespace check for 47 new project files (original prompt/images excluded)
+PASS: .env/cache/logs ignored and .env.example tracked by policy
+PASS: preflight JSON parses and all four pinned image manifest inspections exited 0
+OBSERVED: Docker 3.83 GiB / 2 CPUs; resource adjustment still pending
