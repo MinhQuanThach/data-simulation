@@ -15,7 +15,18 @@ Ngày 1 phải resolve trong Linux/Python 3.11, chạy `pip check`, import provi
 so sánh Spark/Python driver-worker, xuất lock đầy đủ kèm hashes hoặc inventory
 từ image đã build và ghi digest custom image. Không cài stack vào Python host.
 
-Lệnh ở bước build (Dockerfile sẽ được viết ngày 1):
+Ngày 1 có Dockerfile thực tế ở `docker/airflow/Dockerfile`. Helper build tải sdist
+PySpark chính thức theo HTTP ranges và xác minh SHA-256 toàn file để xử lý
+throttling stream lớn; pip cài file gốc đó, version vẫn bị ràng buộc bởi
+`pyspark==4.0.2`. Không dùng `--no-deps` hoặc bỏ qua resolver.
+Sau build, `python scripts/day1.py runtime` chạy `pip check` trên driver và worker,
+xuất `runtime-freeze-py311.txt` cùng inventory thực tế vào `docs/evidence/day1/runtime.json`.
+Freeze giữ direct artifact file URI/hash do pip ghi nhận; file tạm được xóa sau
+build nên freeze này là inventory, không dùng như requirements cài lại. Đầu vào
+build là airflow.in + constraints + helper source URL/hash + base digest.
+Xem STATUS để biết các bước nào đã thực sự pass.
+
+Lệnh cài dependency trong Dockerfile ngày 1 (có thêm URL/hash PySpark nêu trên):
 
 ```bash
 python -m pip install --constraint /opt/lab/requirements/constraints-project-py311.txt --requirement /opt/lab/requirements/airflow.in

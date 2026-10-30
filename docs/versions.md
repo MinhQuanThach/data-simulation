@@ -1,7 +1,9 @@
-# Phiên bản đề xuất đã xác minh nguồn
+# Phiên bản đã khóa và kiểm chứng ngày 1
 
 Ngày chọn: 2026-10-29, target linux/amd64. Không chọn version chỉ dựa vào trang latest.
-**Đã kiểm tra metadata/manifest; chưa pull image layers, build, resolve Linux hoặc chạy E2E.**
+**Đã pull/build và chạy smoke ngày 1 thành công; Grafana mới xác minh nguồn, chưa chạy.**
+Inventory: [runtime.json](evidence/day1/runtime.json); dependency đầy đủ:
+[runtime-freeze-py311.txt](../requirements/runtime-freeze-py311.txt).
 Digest dưới đây là manifest riêng linux/amd64, không phải multi-platform index digest.
 Nguồn machine-readable: `config/stack.json`, `docs/evidence/manifest-*.json`.
 
@@ -11,8 +13,8 @@ Nguồn machine-readable: `config/stack.json`, `docs/evidence/manifest-*.json`.
 | Spark | apache/spark:4.0.2-scala2.13-java17-python3-ubuntu | Spark/PySpark cùng 4.0.2, Scala 2.13, Java 17 |
 | Spark provider | apache-airflow-providers-apache-spark==5.5.0 | Airflow >=2.11, PySpark >=3.5.2; dùng full PySpark cho spark-submit |
 | Common compat / standard provider | 1.19.0 / 1.19.0 | Theo snapshot constraints Airflow 3.3.2/Python 3.11 |
-| Python driver/executor | Cùng runtime minor 3.11 từ Airflow image | Patch version thực tế phải ghi sau build; không dùng Python host 3.13 |
-| Java | 17 từ Spark image đã pin | Patch version thực tế phải kiểm tra ngày 1 |
+| Python driver/executor | **3.11.16** từ Airflow image | Đã đối chiếu driver/worker và Python UDF executor; không dùng Python host 3.13 |
+| Java | **Temurin 17.0.17+10** từ Spark image đã pin | java -version và spark-submit thực tế trên driver/worker |
 | PostgreSQL (hai service) | postgres:16.15-bookworm | Cùng version giảm biến số; minor 16 có release notes chính thức |
 | JDBC | org.postgresql:postgresql:42.7.14 | Driver Java 8+; khóa checksum binary trước build |
 | Grafana OSS | grafana/grafana:12.4.2 | Image miễn phí, phục vụ PostgreSQL datasource ngày 6 |
@@ -35,11 +37,12 @@ nguyên vẹn, SHA-256 ở `docs/evidence/sources.json`. Bản project constrain
 provider 6.3.2 → 5.5.0 và bổ sung PySpark 4.0.2/Py4J 0.10.9.9 để dùng standalone
 spark-submit đầy đủ. Đây là điều chỉnh chủ động, **không phải tổ hợp upstream đã test**.
 Các dependency còn lại theo snapshot upstream; không tải lại constraints tại mỗi task.
+Linux resolver và `pip check` đã pass; provider import/submit đã chạy thật ngày 1.
 
 Provider 6.x mặc định kéo `pyspark-client` (Connect client) và snapshot upstream
 có version client khác Spark đã chọn. Chọn provider 5.5.0 giúp giữ dependency full
 `pyspark` rõ ràng và tránh thêm Connect ngoài baseline. Metadata yêu cầu tối thiểu
-khớp, nhưng chỉ ngày 1 mới chứng minh được build/import/task thực tế.
+khớp; build/import/task thực tế đã được chứng minh bằng smoke ngày 1.
 
 Spark Ubuntu image cài Python bằng apt của Ubuntu Jammy; không giả định là 3.11.
 Thiết kế shared runtime: dùng Airflow Python 3.11 làm base, multi-stage lấy Java 17
@@ -47,7 +50,7 @@ và Spark distribution từ apache/spark đã pin. Cùng custom runtime cho sche
 master, worker. `pyspark==4.0.2` là Python package đầy đủ; `SPARK_HOME=/opt/spark`
 phải trỏ đúng distribution 4.0.2, không trỏ một distribution khác từ PATH.
 Dockerfile ngày 1 kiểm tra đường dẫn binary/JAR, `pip check` và tương thích thư viện
-JRE với base Debian; chưa khẳng định copy runtime đã chạy được.
+JRE với base Debian; build và runtime ngày 1 đã pass các kiểm tra này.
 
 JDBC tải ở bước chuẩn bị/build, version/checksum lưu trong evidence; đặt JAR trên
 driver và executor, không tải từ internet mỗi lần chạy. Chưa cần thêm provider PostgreSQL:
@@ -56,9 +59,17 @@ Python tasks dùng psycopg2 trực tiếp, Spark dùng JDBC.
 Đã tải cache JDBC 42.7.14 (1,221,004 bytes), SHA-256:
 `73914527305a40cce504b0d3d90b23caf565136912d607ae8ae7c5895512332c`.
 Đây là hash bytes tải qua HTTPS, chưa kiểm chứng chữ ký độc lập; Dockerfile
-ngày 1 phải kiểm tra đúng hash này. Cache `.local/vendor/` không commit.
+ngày 1 đã kiểm tra đúng hash này trên driver và worker. Cache `.local/vendor/` không commit.
 
 ## Cổng kiểm tra ngày 1
+
+Build ngày 2026-10-30 gặp throttling single-stream PySpark (mẫu 10 MiB trong container
+timeout 30s, chỉ nhận 2.50 MB, ~83 KB/s). `docker/airflow/fetch_pyspark.py` tải đúng
+sdist chính thức theo ranges 1 MiB, tối đa 8 luồng, mỗi range có timeout/retry và
+kiểm Content-Range/size; toàn file 434209940 bytes phải khớp SHA-256
+`938b4a1883383374d331ebfcb5d92debfa1891cf3d7a6d730520a1a2d23f1a90` trước pip install.
+Metadata/hash từ `https://pypi.org/pypi/pyspark/4.0.2/json`. Không đổi dependency
+version, không dùng mirror, không bỏ TLS/checksum, không tải dependency lúc task chạy.
 
 - Pull các nguồn theo digest, build custom runtime, resolve dependency trong Linux/Python 3.11.
 - `pip check`, import SparkSubmitOperator, `spark-submit --version`, `java -version`,

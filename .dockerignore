@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+.local
+logs
+__pycache__
+**/__pycache__
+**/*.pyc
+docs/evidence
+images

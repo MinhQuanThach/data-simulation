@@ -1,5 +1,11 @@
 # Chuẩn bị môi trường Windows và Docker
 
+Cập nhật 2026-10-30: **đã triển khai và nghiệm thu ngày 1 thành công**, không còn
+thao tác sửa môi trường thủ công bắt buộc. Preflight mới tại
+[preflight-day1-2026-10-30.json](evidence/preflight-day1-2026-10-30.json);
+runtime/DAG/executor/SQL evidence và lệnh tiếp tục tại [STATUS](../STATUS.md)
+và [day1.md](day1.md). Các số liệu ngày 2026-10-29 bên dưới là lịch sử chuẩn bị.
+
 Tái kiểm tra ngày 2026-10-29 theo Asia/Saigon sau khi user tăng tài nguyên WSL.
 **Môi trường đã đủ điều kiện bắt đầu task ngày 1; không còn thao tác sửa thủ công bắt buộc.**
 Đây là kiểm tra mức sẵn sàng; chưa pull/build image hoặc chạy workload lab.

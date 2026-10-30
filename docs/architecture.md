@@ -1,6 +1,9 @@
 # Kiến trúc đã chọn cho baseline
 
-Đây là thiết kế chuẩn bị, chưa phải sơ đồ các service đã khởi chạy.
+Sơ đồ là baseline cả tuần. Implementation ngày 1 trong `compose.yaml` chỉ bật
+hai PostgreSQL, Airflow và Spark master/worker; smoke dùng fixture và staging.
+Crawler, quality, publish và Grafana sẽ triển khai ở các ngày sau. Trạng thái
+runtime/kiểm chứng xem [STATUS](../STATUS.md), lệnh xem [day1](day1.md).
 
 ```mermaid
 flowchart LR
@@ -61,7 +64,7 @@ workspace Windows. Spark work phải ghi được bởi user của custom runtim
   JDBC JAR version/checksum khóa ở bước build, đặt ở classpath driver/executor;
   không tải bằng `--packages` lúc task chạy.
 - `max_active_runs=1`, Airflow parallelism 1 và Spark pool 1; worker 2 cores,
-  executor 1 GiB, driver 1 GiB là mức khởi điểm để đo, chưa phải số liệu đã chạy.
+  executor 1 GiB, driver 1 GiB là mức khởi điểm đã chạy smoke ngày 1; chưa đo tải lớn.
 - Tắt speculation; ban đầu `spark.task.maxFailures=1` cho JDBC staging nhỏ;
   Airflow retry cả attempt và cleanup. Sau này chỉ tăng khi đã chứng minh an toàn ghi.
 - Healthcheck DB/Airflow/Spark và pre-submit check worker registered; không coi

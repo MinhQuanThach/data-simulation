@@ -3,9 +3,10 @@
 Lab local để học tương tác của 7 block Data Engineering bằng HTML thật.
 Đặc tả gốc: [bronze_silver_7day_project_prompt.md](bronze_silver_7day_project_prompt.md).
 
-**Trạng thái 2026-10-29: chuẩn bị trước ngày 1; chưa triển khai pipeline.**
-Chưa có `compose.yaml`, Dockerfile hoặc DAG hoạt động. Không có kết quả
-end-to-end, dữ liệu crawl thật hay Spark executor log trong bước này.
+**Trạng thái 2026-10-30: ngày 1 đã nghiệm thu PASS bằng DAG, executor log và SQL.**
+Compose, runtime Airflow/Spark dùng chung, SQL init/roles/fixture và DAG JDBC smoke
+đã có. Kết quả nghiệm thu thực tế và phần chưa làm được ghi tại [STATUS](STATUS.md).
+Ngày 1 dùng fixture viết tay; crawl web/Silver/word-count thuộc các ngày sau.
 
 Đọc theo thứ tự:
 
@@ -15,6 +16,23 @@ end-to-end, dữ liệu crawl thật hay Spark executor log trong bước này.
 3. [Phiên bản](docs/versions.md): image tags/digests, dependency pins, giới hạn xác minh.
 4. [Kiến trúc](docs/architecture.md) và [hợp đồng dữ liệu](docs/data_dictionary.md).
 5. [PLAN](PLAN.md): mục tiêu, file dự kiến và nghiệm thu từng ngày.
+6. [Vận hành ngày 1](docs/day1.md): pull/build/init, UI, smoke/query và xử lý lỗi.
+
+Khởi động và kiểm tra ngày 1:
+
+```powershell
+python scripts/init-env.py
+python scripts/day1.py up
+python scripts/day1.py runtime
+python scripts/day1.py smoke
+python scripts/day1.py status
+```
+
+Airflow http://localhost:8080, Spark master http://localhost:8081, worker
+http://localhost:8082. Tài khoản Airflow trong `.env` local, không commit hoặc gửi
+file này. Script smoke lưu report, SQL output và executor log trong
+`docs/evidence/day1/`; `latest.json` chỉ xuất hiện khi đủ kiểm tra PASS.
+Dừng và giữ dữ liệu: `python scripts/day1.py stop`.
 
 Kiểm tra phần chuẩn bị, không cài dependency:
 
@@ -38,11 +56,10 @@ paywall, JavaScript rendering, PDF, streaming, Gold hoặc ML. PostgreSQL là
 storage quan hệ; metadata tự xây; quality dùng Spark; tokenization đơn giản.
 Không có DataHub, lakehouse, dbt, Prometheus hay OpenTelemetry trong baseline.
 
-Các thư mục skeleton có `.gitkeep` chưa chứa implementation. Chỉ tạo file chạy
-được khi đến ngày tương ứng; không dùng file giả trả success để đại diện tiến độ.
-Lệnh pull/build/start/init/trigger/query/stop sẽ bổ sung và chạy thử ở ngày 1.
-Chưa chạy `docker compose up` khi chưa có Compose. Không xóa volume để cold start;
-ngày 7 dùng project/volume thử nghiệm riêng.
+Các thư mục crawler, nghiệp vụ Silver/quality/metadata và Grafana còn skeleton.
+Worker dùng chung image Airflow để đồng nhất Python 3.11; đây là giản lược cho lab.
+Hai PostgreSQL giữ volume riêng; admin chỉ init, task dùng role crawler/job riêng.
+Không xóa volume để cold start; ngày 7 dùng project/volume thử nghiệm riêng.
 
 Repository public: [MinhQuanThach/data-simulation](https://github.com/MinhQuanThach/data-simulation),
 nhánh chính `main`, remote `origin`. `.env.example` chỉ chứa placeholder.

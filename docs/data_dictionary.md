@@ -1,7 +1,14 @@
 # Hợp đồng dữ liệu trước ngày 1
 
-Thiết kế version 1.0.0; SQL/migrations và enforcement chưa triển khai.
+Thiết kế nghiệp vụ version 1.0.0; ngày 1 mới hiện thực Bronze và staging chẩn đoán.
 Timestamp dùng PostgreSQL timestamptz, lưu UTC; UI/tài liệu người dùng theo Asia/Saigon.
+
+Cập nhật ngày 1: `sql/init/001_day1.sql` đã hiện thực `bronze.web_pages` và bảng
+chẩn đoán `staging.smoke_results` (run_id text, page_id, html_bytes, content_hash,
+spark_application_id, executor_python, processed_at; PK run_id/page_id).
+Bronze giữ UUID và đủ HTTP/source fields. Bảng smoke không phải Silver staging,
+chỉ chứng minh đọc/ghi JDBC và không tính word-count. Các bảng nghiệp vụ trong
+hợp đồng phía dưới vẫn là kế hoạch cho ngày 2–6.
 
 ## Định danh và snapshot
 

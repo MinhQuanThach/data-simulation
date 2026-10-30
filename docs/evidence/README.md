@@ -21,6 +21,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preflight.ps1 -Onlin
 python scripts/check-preparation.py
 ```
 
-Không có chứng cứ image layers đã pull/build, container đã chạy, DAG thành công
-hoặc dữ liệu web thật. Không thêm secrets vào evidence. Tên file ghi ngày khảo sát;
-timestamp UTC nằm trong report, diễn giải thời gian theo Asia/Saigon khi trao đổi.
+Các evidence ngày 2026-10-29 chỉ thuộc chuẩn bị. Ngày 2026-10-30 đã có
+[day1/](day1/README.md) với runtime, DAG success, SQL và executor log thật;
+[preflight-day1-2026-10-30.json](preflight-day1-2026-10-30.json) là khảo sát mới.
+Chưa có dữ liệu web thật hoặc Silver/word-count. Không thêm secrets vào evidence.
+Timestamp UTC trong report, diễn giải thời gian theo Asia/Saigon khi trao đổi.

@@ -1,6 +1,8 @@
 {
   "selected_on": "2026-10-29",
-  "status": "source_verified_runtime_pending",
+  "status": "day1_runtime_verified",
+  "runtime_verified_on": "2026-10-30",
+  "runtime_evidence": "docs/evidence/day1/runtime.json",
   "platform": "linux/amd64",
   "images": {
     "airflow": {
@@ -26,5 +28,5 @@
   "python_minor": "3.11",
   "java_major": 17,
   "jdbc_version": "42.7.14",
-  "runtime_strategy": "Shared custom runtime based on the pinned Airflow Python 3.11 image; stage Spark distribution and Java 17 from the pinned Apache Spark image. Spark worker uses this runtime too. Verify actual Python/Java patch versions at day-1 build."
+  "runtime_strategy": "Shared custom runtime from pinned Airflow and Spark images. Verified day 1: Python 3.11.16 on driver and worker, Temurin Java 17.0.17+10, Spark 4.0.2. See runtime_evidence for custom image digest and complete inventory."
 }

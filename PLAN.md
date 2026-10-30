@@ -1,5 +1,10 @@
 # Kế hoạch thực hiện
 
+Cập nhật 2026-10-30: **chuẩn bị và ngày 1 đã hoàn thành**. Hai smoke DagRuns PASS,
+7 service healthy, worker ALIVE, runtime driver/worker khớp, có SQL output và executor log.
+Evidence tại [STATUS](STATUS.md) và [latest.json](docs/evidence/day1/latest.json).
+**Ngày 2–7 chưa triển khai**; bước tiếp theo là ngày 2, không tự coi các ngày sau đã xong.
+
 Giai đoạn chuẩn bị không tính là ngày 1 hoàn thành. Mỗi ngày trước khi sửa code:
 nêu lại mục tiêu, file dự kiến, tiêu chí xong; cuối ngày cập nhật CONTEXT/STATUS,
 lệnh chạy lại, bằng chứng, lỗi và việc còn thiếu. Không tự đánh dấu ngày sau là xong.
@@ -15,17 +20,29 @@ lệnh chạy lại, bằng chứng, lỗi và việc còn thiếu. Không tự 
 | 6 | Monitoring thật | telemetry code, grafana/provisioning, grafana/dashboards | Thành công/lỗi khác nhau; liên kết run_id; dashboard tái provision sau restart |
 | 7 | Tái lập và bàn giao | scripts nghiệm thu, README/docs/STATUS, transcripts | Cold start project/volume riêng; fixture, ≥2 URL thật, lỗi, retry, restart; checklist đặc tả có bằng chứng |
 
-Ngày 1 cần đi theo thứ tự:
+Ngày 1 đã thực hiện và kiểm chứng theo thứ tự:
 
-1. Kiểm tra lại Docker 8 GiB/4 CPU và dung lượng trên ổ chứa Docker disk image.
-2. Pull image nguồn đã pin; build shared runtime; chạy `pip check`, kiểm tra Java,
-   Python và Spark trên driver/worker; xuất dependency lock/inventory đầy đủ.
-3. Viết Compose LocalExecutor với api-server/scheduler/dag-processor/init,
-   hai PostgreSQL, Spark master/worker; healthchecks và named volumes.
-4. Tạo secrets local, migration/seed admin riêng, tài khoản job không là superuser;
-   quyền cơ bản đủ dùng ngày 1, ma trận đầy đủ/nghiệm thu deny ngày 5.
-5. Seed fixture hợp lệ, kích hoạt smoke DAG và kiểm tra SQL staging.
-6. Lưu application_id, executor log, run_id và kết quả SQL. Nếu bị chặn,
-   giữ implementation có thể làm, ghi lệnh để user chạy, không báo E2E pass.
+1. [x] Docker Linux/amd64, 7.76 GiB/4 CPU; preflight không warnings, xác nhận đĩa host.
+2. [x] Pull đúng digest; build shared runtime; pip check/import/Java/Spark PASS;
+   Python 3.11.16/Java 17.0.17; xuất inventory 446 dòng và image digest.
+3. [x] Compose LocalExecutor api-server/scheduler/dag-processor/init,
+   hai PostgreSQL, master/worker; healthchecks/volumes; 7 service healthy.
+4. [x] Secrets local, admin init riêng, lab_crawler/lab_spark không superuser;
+   UI auth HTTP 200. Ma trận quyền đầy đủ/nghiệm thu deny vẫn thuộc ngày 5.
+5. [x] Seed fixture và hai DagRuns thật; 3 task/run success; SQL 1 row/run,
+   425 bytes/hash khớp fixture; app IDs khác nhau theo snapshot.
+6. [x] Lưu run/application IDs, Airflow task log, executor log, master JSON, SQL output;
+   không còn blocker ngày 1. Lệnh tái chạy đã có tại docs/day1.md.
 
 Chưa thêm Grafana vào ngày 1; chưa crawler trước khi fixture baseline ổn định.
+
+Ngày 2 cần làm tiếp:
+
+1. Migration staging.documents/staging.word_counts, silver.documents/demo.word_counts
+   và metadata/publish tối thiểu để transaction/lineage có điểm mở rộng về sau.
+2. Spark parse body text, Unicode NFC/tokenize theo config hợp đồng; explode/groupBy/count;
+   kiểm tra clean_text không rỗng, giữ đủ counts; không tính counts bằng Python ngoài Spark.
+3. Retry cùng run_id: cleanup attempt có kiểm soát, publish một transaction,
+   run đã publish cùng versions/attempt hợp lệ no-op; lỗi không để lộ nửa kết quả.
+4. DAG fixture Bronze → Spark → publish → verify; oracle 12 tokens/8 words/top-3;
+   chạy và lưu SQL/log bằng chứng, cập nhật tài liệu. Chưa crawl URL thật trong ngày 2.
