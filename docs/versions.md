@@ -4,6 +4,9 @@ Ngày chọn: 2026-10-29, target linux/amd64. Không chọn version chỉ dựa 
 **Đã pull/build và chạy smoke ngày 1 thành công; Grafana mới xác minh nguồn, chưa chạy.**
 Inventory: [runtime.json](evidence/day1/runtime.json); dependency đầy đủ:
 [runtime-freeze-py311.txt](../requirements/runtime-freeze-py311.txt).
+Ngày 2 giữ nguyên pins/dependencies; inventory và image ID **thực sự của container
+đang chạy** được đo lại tại [day2/runtime.json](evidence/day2/runtime.json).
+Không suy ra image ID hiện tại từ một tag local hoặc từ report lịch sử ngày 1.
 Digest dưới đây là manifest riêng linux/amd64, không phải multi-platform index digest.
 Nguồn machine-readable: `config/stack.json`, `docs/evidence/manifest-*.json`.
 

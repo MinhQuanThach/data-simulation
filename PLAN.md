@@ -1,9 +1,11 @@
 # Kế hoạch thực hiện
 
-Cập nhật 2026-10-30: **chuẩn bị và ngày 1 đã hoàn thành**. Hai smoke DagRuns PASS,
-7 service healthy, worker ALIVE, runtime driver/worker khớp, có SQL output và executor log.
-Evidence tại [STATUS](STATUS.md) và [latest.json](docs/evidence/day1/latest.json).
-**Ngày 2–7 chưa triển khai**; bước tiếp theo là ngày 2, không tự coi các ngày sau đã xong.
+Cập nhật 2026-10-30: **chuẩn bị, ngày 1 và ngày 2 đã hoàn thành**. Ngày 2 có fixture
+Bronze → Spark standalone → Silver/demo, oracle 12 tokens/8 từ, retry task thật,
+replay cùng run, rollback transaction và empty/script-only rejection PASS.
+7 service healthy, runtime driver/worker khớp; có SQL output và executor logs.
+Evidence tại [STATUS](STATUS.md), [ngày 1](docs/evidence/day1/latest.json),
+[ngày 2](docs/evidence/day2/latest.json). **Ngày 3–7 chưa triển khai**; bước tiếp là ngày 3.
 
 Giai đoạn chuẩn bị không tính là ngày 1 hoàn thành. Mỗi ngày trước khi sửa code:
 nêu lại mục tiêu, file dự kiến, tiêu chí xong; cuối ngày cập nhật CONTEXT/STATUS,
@@ -36,13 +38,34 @@ Ngày 1 đã thực hiện và kiểm chứng theo thứ tự:
 
 Chưa thêm Grafana vào ngày 1; chưa crawler trước khi fixture baseline ổn định.
 
-Ngày 2 cần làm tiếp:
+Ngày 2 đã thực hiện và kiểm chứng:
 
-1. Migration staging.documents/staging.word_counts, silver.documents/demo.word_counts
-   và metadata/publish tối thiểu để transaction/lineage có điểm mở rộng về sau.
-2. Spark parse body text, Unicode NFC/tokenize theo config hợp đồng; explode/groupBy/count;
-   kiểm tra clean_text không rỗng, giữ đủ counts; không tính counts bằng Python ngoài Spark.
-3. Retry cùng run_id: cleanup attempt có kiểm soát, publish một transaction,
-   run đã publish cùng versions/attempt hợp lệ no-op; lỗi không để lộ nửa kết quả.
-4. DAG fixture Bronze → Spark → publish → verify; oracle 12 tokens/8 words/top-3;
-   chạy và lưu SQL/log bằng chứng, cập nhật tài liệu. Chưa crawl URL thật trong ngày 2.
+1. [x] Migration 002_day2.sql: staging/Silver/demo + PK/FK/checks, published view,
+   control metadata tối thiểu; init-lab áp dụng lại không xóa lịch sử.
+2. [x] Spark parse body/NFC/tokenize theo hợp đồng 1.0.0; explode/groupBy/count,
+   5 unit tests Linux và full oracle PASS. YAML policy reader vẫn thuộc ngày 4.
+3. [x] Task retry thật sau ghi dở staging; cleanup attempt riêng run; publisher chặn
+   incomplete; attempt 2 output đúng, không duplicate. Có log từng app/run/attempt.
+4. [x] Publish một transaction; connection khác không thấy uncommitted; lỗi giữa publish
+   rollback cả Silver/demo/metadata; retry publish no-op sau success.
+5. [x] Clear đúng logical date cùng DagRun đã publish, đủ 4 task chạy lại success,
+   snapshot/timestamps/app ID không đổi. DagRun mới giữ snapshot mới riêng run_id.
+6. [x] Empty/script-only fail, downstream upstream_failed, không public rows;
+   top-N SQL chạy thật, không cắt toàn bộ counts. 7 service healthy sau nghiệm thu.
+7. [x] docs/day2.md, README, data dictionary/architecture/versions/fixtures docs và
+   CONTEXT/PLAN/STATUS cập nhật. Runner: python scripts/day2.py accept.
+
+Chưa làm crawler, quarantine/partial, full catalog/lineage/roles hoặc dashboard trong ngày 2.
+Ngày 2 tạm dùng chung lab_spark cho job/publisher; tách identity/test deny ở ngày 5.
+
+Ngày 3 cần làm tiếp:
+
+1. Validate cấu hình urls/top_n, chuẩn hóa/dedup URL và run/page IDs theo hợp đồng;
+   giữ đường fixture để regression, không dùng oracle fixture để verify trang web.
+2. Crawler HTTP: robots, timeout, response size sau giải nén, redirects/retries giới hạn,
+   rate limit; Bronze lưu source bytes/hash/encoding/HTTP fields và lỗi theo từng URL.
+3. DAG nhận URLs từ dag_run.conf, crawl → Spark hiện có → publish → verify invariants;
+   system failure vẫn fail thật, chưa coi partial/quarantine ngày 4 đã hoàn tất.
+4. Chạy URL HTML công khai rồi đổi sang URL thứ hai bằng config, không sửa source;
+   lưu bằng chứng HTTP/HTML thật/Silver/top-N, test URL lỗi báo rõ.
+5. Cập nhật docs và CONTEXT/PLAN/STATUS bằng kết quả đã đo; không tự chuyển ngày 4.

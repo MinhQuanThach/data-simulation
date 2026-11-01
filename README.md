@@ -3,10 +3,11 @@
 Lab local để học tương tác của 7 block Data Engineering bằng HTML thật.
 Đặc tả gốc: [bronze_silver_7day_project_prompt.md](bronze_silver_7day_project_prompt.md).
 
-**Trạng thái 2026-10-30: ngày 1 đã nghiệm thu PASS bằng DAG, executor log và SQL.**
-Compose, runtime Airflow/Spark dùng chung, SQL init/roles/fixture và DAG JDBC smoke
-đã có. Kết quả nghiệm thu thực tế và phần chưa làm được ghi tại [STATUS](STATUS.md).
-Ngày 1 dùng fixture viết tay; crawl web/Silver/word-count thuộc các ngày sau.
+**Trạng thái 2026-10-30: ngày 1 và ngày 2 đã nghiệm thu PASS.**
+Đã có Compose/runtime Airflow–Spark, DAG JDBC smoke và DAG fixture → Spark clean/
+tokenize/count → transaction publish Silver/demo. Text/counts, retry task thật,
+replay cùng DagRun và rollback publish đã kiểm tra; kết quả đầy đủ tại [STATUS](STATUS.md).
+Đầu vào hiện là fixture viết tay; crawler web thuộc ngày 3.
 
 Đọc theo thứ tự:
 
@@ -17,6 +18,7 @@ Ngày 1 dùng fixture viết tay; crawl web/Silver/word-count thuộc các ngày
 4. [Kiến trúc](docs/architecture.md) và [hợp đồng dữ liệu](docs/data_dictionary.md).
 5. [PLAN](PLAN.md): mục tiêu, file dự kiến và nghiệm thu từng ngày.
 6. [Vận hành ngày 1](docs/day1.md): pull/build/init, UI, smoke/query và xử lý lỗi.
+7. [Vận hành ngày 2](docs/day2.md): fixture/Silver, migration, nghiệm thu retry/rollback/top-N.
 
 Khởi động và kiểm tra ngày 1:
 
@@ -56,9 +58,23 @@ paywall, JavaScript rendering, PDF, streaming, Gold hoặc ML. PostgreSQL là
 storage quan hệ; metadata tự xây; quality dùng Spark; tokenization đơn giản.
 Không có DataHub, lakehouse, dbt, Prometheus hay OpenTelemetry trong baseline.
 
-Các thư mục crawler, nghiệp vụ Silver/quality/metadata và Grafana còn skeleton.
+Chạy ngày 2 trên runtime ngày 1 đã build:
+
+```powershell
+docker compose up -d --no-build --wait --wait-timeout 360
+python scripts/day2.py migrate
+python scripts/day2.py run
+python scripts/day2.py accept
+```
+
+`run` là luồng bình thường. `accept` tạo thêm các DagRun lỗi có chủ đích để kiểm
+tra retry và chặn text rỗng; `latest.json` chỉ ghi sau khi toàn bộ checks PASS.
+Xem [docs/day2.md](docs/day2.md) để query kết quả và đọc bằng chứng.
+
+Crawler, quality/quarantine đầy đủ, catalog/lineage và Grafana còn chờ ngày 3–6.
 Worker dùng chung image Airflow để đồng nhất Python 3.11; đây là giản lược cho lab.
 Hai PostgreSQL giữ volume riêng; admin chỉ init, task dùng role crawler/job riêng.
+Ngày 2 Spark và publisher tạm dùng chung role job; tách publisher và test deny ở ngày 5.
 Không xóa volume để cold start; ngày 7 dùng project/volume thử nghiệm riêng.
 
 Repository public: [MinhQuanThach/data-simulation](https://github.com/MinhQuanThach/data-simulation),

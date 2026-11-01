@@ -8,6 +8,8 @@ from src.common.smoke import connect, FIXTURE_PAGE, FIXTURE_RUN, FIXTURE_URL, FI
 
 with connect("LAB_ADMIN") as conn, conn.cursor() as cur:
     cur.execute(Path("/opt/lab/sql/init/001_day1.sql").read_text())
+    for migration in sorted(Path("/opt/lab/sql/migrations").glob("*.sql")):
+        cur.execute(migration.read_text(encoding="utf-8"))
     for role in ("CRAWLER", "SPARK"):
         username = os.environ[f"{role}_DB_USER"]
         cur.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (username,))
@@ -22,6 +24,12 @@ with connect("LAB_ADMIN") as conn, conn.cursor() as cur:
     cur.execute(sql.SQL("GRANT SELECT ON bronze.web_pages TO {}").format(spark))
     cur.execute(sql.SQL("GRANT USAGE ON SCHEMA staging TO {}").format(spark))
     cur.execute(sql.SQL("GRANT SELECT, INSERT, DELETE ON staging.smoke_results TO {}").format(spark))
+    # Day 2 shares the job identity with the Python publisher. Split publisher
+    # credentials and test the full allow/deny matrix on day 5.
+    cur.execute(sql.SQL("GRANT USAGE ON SCHEMA silver, demo, metadata TO {}").format(spark))
+    cur.execute(sql.SQL("GRANT SELECT, INSERT, DELETE ON staging.documents, staging.word_counts, silver.documents, demo.word_counts TO {}").format(spark))
+    cur.execute(sql.SQL("GRANT SELECT, INSERT, UPDATE ON metadata.pipeline_runs TO {}").format(spark))
+    cur.execute(sql.SQL("GRANT SELECT ON demo.published_word_counts TO {}").format(spark))
     raw = FIXTURE_PATH.read_bytes()
     cur.execute("""INSERT INTO bronze.web_pages VALUES
         (%s::uuid,%s,%s,%s,now(),200,'text/html; charset=utf-8',%s,%s,'utf-8',NULL)

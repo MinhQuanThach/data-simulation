@@ -1,14 +1,21 @@
-# Hợp đồng dữ liệu trước ngày 1
+# Hợp đồng dữ liệu
 
-Thiết kế nghiệp vụ version 1.0.0; ngày 1 mới hiện thực Bronze và staging chẩn đoán.
+Thiết kế nghiệp vụ version 1.0.0; ngày 2 đã thêm staging/Silver/demo và control metadata.
 Timestamp dùng PostgreSQL timestamptz, lưu UTC; UI/tài liệu người dùng theo Asia/Saigon.
 
 Cập nhật ngày 1: `sql/init/001_day1.sql` đã hiện thực `bronze.web_pages` và bảng
 chẩn đoán `staging.smoke_results` (run_id text, page_id, html_bytes, content_hash,
 spark_application_id, executor_python, processed_at; PK run_id/page_id).
 Bronze giữ UUID và đủ HTTP/source fields. Bảng smoke không phải Silver staging,
-chỉ chứng minh đọc/ghi JDBC và không tính word-count. Các bảng nghiệp vụ trong
-hợp đồng phía dưới vẫn là kế hoạch cho ngày 2–6.
+chỉ chứng minh đọc/ghi JDBC và không tính word-count.
+
+Cập nhật ngày 2: `sql/migrations/002_day2.sql` hiện thực staging.documents,
+staging.word_counts, silver.documents, demo.word_counts, demo.published_word_counts
+và metadata.pipeline_runs tối thiểu. Staging dùng run_id text để JDBC ghi UUID
+dưới dạng string; publisher cast sang UUID ở các bảng công bố. Metadata lưu
+active_attempt, staging_complete, application ID, versions, trạng thái và metrics
+tối thiểu. Các bảng quarantine/quality/catalog/lineage/telemetry còn là kế hoạch.
+Chi tiết implementation và chính sách ngày 2 tại [day2.md](day2.md).
 
 ## Định danh và snapshot
 
@@ -69,6 +76,10 @@ bằng Spark explode/groupBy/count. Dùng UDF để parse HTML được phép; k
 toàn bộ kết quả ngoài Spark rồi khởi động Spark tượng trưng.
 
 ## Quality, retry và publish
+
+Phần dưới là đích hoàn thiện cả tuần. Ngày 2 mới fail toàn run nếu có trang lỗi,
+không publish; chưa persisted quality/quarantine hoặc partial. Transaction publish,
+cleanup attempt, token invariants và published no-op đã hiện thực ngày 2.
 
 - Trang lỗi đã biết → quarantine theo page với reason; valid > 0 và rejected > 0
   → publish valid và status partial. Valid = 0 → quality evidence/quarantine giữ lại,

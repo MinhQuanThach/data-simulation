@@ -7,6 +7,8 @@ chỉ là định danh nguồn cho kiểm tra, tuyệt đối không đưa vào 
 top-3 là `chào`, `dữ`, `liệu` (mỗi từ 2 lần). Title không thuộc body text.
 Không bỏ stop words; giữ số; dấu câu tách token; tiếng Việt chưa tách từ ngôn ngữ học.
 
-Ngày 1 chỉ seed trang hợp lệ và chứng minh Spark đọc/ghi JDBC; chưa đòi hỏi
-thực hiện transformation. Các case lỗi và retry là hợp đồng kiểm tra về sau,
-chưa được chạy end-to-end trong bước chuẩn bị.
+Ngày 1 chỉ seed trang hợp lệ và chứng minh Spark đọc/ghi JDBC. Ngày 2 đã chạy
+transform/count theo oracle, task retry sau khi staging ghi dở và replay published
+snapshot qua Airflow/Spark standalone/PostgreSQL. Empty/script-only dùng để kiểm
+tra chặn text rỗng; kết quả tại STATUS và docs/evidence/day2/. Các case HTTP/type,
+duplicate, partial/quarantine đầy đủ vẫn chờ nghiệm thu ngày 4.

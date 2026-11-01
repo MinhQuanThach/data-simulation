@@ -1,9 +1,10 @@
 # Kiến trúc đã chọn cho baseline
 
-Sơ đồ là baseline cả tuần. Implementation ngày 1 trong `compose.yaml` chỉ bật
-hai PostgreSQL, Airflow và Spark master/worker; smoke dùng fixture và staging.
-Crawler, quality, publish và Grafana sẽ triển khai ở các ngày sau. Trạng thái
-runtime/kiểm chứng xem [STATUS](../STATUS.md), lệnh xem [day1](day1.md).
+Sơ đồ là baseline cả tuần. `compose.yaml` bật hai PostgreSQL, Airflow và Spark
+master/worker. Ngày 2 đã có fixture → Spark clean/tokenize/count → staging →
+transaction publish Silver/demo, control metadata tối thiểu và chặn text rỗng.
+Crawler, quality/quarantine đầy đủ, catalog/lineage và Grafana thuộc các ngày sau.
+Runtime/kiểm chứng xem [STATUS](../STATUS.md), lệnh xem [day1](day1.md)/[day2](day2.md).
 
 ```mermaid
 flowchart LR
