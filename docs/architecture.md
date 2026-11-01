@@ -3,8 +3,10 @@
 Sơ đồ là baseline cả tuần. `compose.yaml` bật hai PostgreSQL, Airflow và Spark
 master/worker. Ngày 2 đã có fixture → Spark clean/tokenize/count → staging →
 transaction publish Silver/demo, control metadata tối thiểu và chặn text rỗng.
-Crawler, quality/quarantine đầy đủ, catalog/lineage và Grafana thuộc các ngày sau.
-Runtime/kiểm chứng xem [STATUS](../STATUS.md), lệnh xem [day1](day1.md)/[day2](day2.md).
+Ngày 3 thêm crawler HTTP/robots nhận `urls` từ conf, giữ bytes/HTTP audit riêng ở
+Bronze; cả đầu vào web và fixture dùng chung Spark/publisher. Quality/quarantine
+đầy đủ, catalog/lineage và Grafana thuộc ngày 4–6.
+Runtime/kiểm chứng xem [STATUS](../STATUS.md), lệnh xem [day1](day1.md)/[day2](day2.md)/[day3](day3.md).
 
 ```mermaid
 flowchart LR

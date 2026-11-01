@@ -3,11 +3,11 @@
 Lab local để học tương tác của 7 block Data Engineering bằng HTML thật.
 Đặc tả gốc: [bronze_silver_7day_project_prompt.md](bronze_silver_7day_project_prompt.md).
 
-**Trạng thái 2026-10-30: ngày 1 và ngày 2 đã nghiệm thu PASS.**
+**Trạng thái 2026-11-01: ngày 1–3 đã hoàn thành, nghiệm thu PASS.**
 Đã có Compose/runtime Airflow–Spark, DAG JDBC smoke và DAG fixture → Spark clean/
 tokenize/count → transaction publish Silver/demo. Text/counts, retry task thật,
 replay cùng DagRun và rollback publish đã kiểm tra; kết quả đầy đủ tại [STATUS](STATUS.md).
-Đầu vào hiện là fixture viết tay; crawler web thuộc ngày 3.
+Ngày 3 đã thêm crawler nhận `urls` từ DAG conf; xem kết quả xác minh tại STATUS.
 
 Đọc theo thứ tự:
 
@@ -19,6 +19,8 @@ replay cùng DagRun và rollback publish đã kiểm tra; kết quả đầy đ�
 5. [PLAN](PLAN.md): mục tiêu, file dự kiến và nghiệm thu từng ngày.
 6. [Vận hành ngày 1](docs/day1.md): pull/build/init, UI, smoke/query và xử lý lỗi.
 7. [Vận hành ngày 2](docs/day2.md): fixture/Silver, migration, nghiệm thu retry/rollback/top-N.
+8. [Vận hành ngày 3](docs/day3.md): URL configurable, crawler/robots, bytes Bronze,
+   test HTTP thật, replay và evidence web.
 
 Khởi động và kiểm tra ngày 1:
 
@@ -71,7 +73,19 @@ python scripts/day2.py accept
 tra retry và chặn text rỗng; `latest.json` chỉ ghi sau khi toàn bộ checks PASS.
 Xem [docs/day2.md](docs/day2.md) để query kết quả và đọc bằng chứng.
 
-Crawler, quality/quarantine đầy đủ, catalog/lineage và Grafana còn chờ ngày 3–6.
+Chạy URL web thật trên runtime đã có:
+
+```powershell
+python scripts/day3.py migrate
+python scripts/day3.py run --urls https://example.com --top-n 5
+python scripts/day3.py run --urls https://www.python.org/about/ --top-n 5
+python scripts/day3.py accept
+```
+
+DAG hiện có năm task validate/crawl/Spark/publish/verify. Bỏ `urls` để chạy lại
+fixture. `top_n` giới hạn từng trang, toàn bộ counts giữ lại. Mỗi URL duy nhất có
+Bronze row kể cả lỗi; ngày 3 vẫn fail toàn run khi có trang lỗi, không publish.
+Quarantine/partial, catalog/lineage và Grafana còn chờ ngày 4–6.
 Worker dùng chung image Airflow để đồng nhất Python 3.11; đây là giản lược cho lab.
 Hai PostgreSQL giữ volume riêng; admin chỉ init, task dùng role crawler/job riêng.
 Ngày 2 Spark và publisher tạm dùng chung role job; tách publisher và test deny ở ngày 5.

@@ -143,8 +143,11 @@ def output_snapshot(run_id, top_n=3):
             WHERE run_id=%s::uuid ORDER BY page_id,count DESC,word COLLATE "C" ASC""", (run_id,))
         counts = [{"page_id": page, "word": word, "count": count} for page, word, count in cur.fetchall()]
     # Display limit only. The complete counts above remain available for checks.
+    displayed = []
+    for page in dict.fromkeys(row["page_id"] for row in counts):
+        displayed.extend([row for row in counts if row["page_id"] == page][:top_n])
     return {"metadata": metadata, "documents": documents, "word_counts": counts,
-            "top_n": counts[:top_n]}
+            "top_n": displayed}
 
 
 def verify_output(run_id, top_n=3):

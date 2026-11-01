@@ -1,31 +1,38 @@
-"""Day-2 fixture -> standalone Spark -> atomic Silver/demo publish."""
+"""Configurable web/fixture -> Bronze -> standalone Spark -> atomic publish."""
 from datetime import datetime, timedelta, timezone
 
 from airflow.sdk import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
-from src.common.pipeline import prepare_fixture, publish_results, verify_output
+from src.common.pipeline import publish_results
+from src.crawler.pipeline import validate_config, crawl_to_bronze, verify_ingestion
 
-RUN_ID = "{{ ti.xcom_pull(task_ids='prepare_fixture')['run_id'] }}"
+RUN_ID = "{{ ti.xcom_pull(task_ids='crawl_to_bronze')['run_id'] }}"
 
 with DAG(
     dag_id="bronze_to_silver", start_date=datetime(2026, 10, 29, tzinfo=timezone.utc),
     schedule=None, catchup=False, max_active_runs=1,
     default_args={"retries": 1, "retry_delay": timedelta(seconds=30)},
-    tags=["day2", "fixture", "silver"],
-    doc_md="Handwritten fixtures only. conf: fixture_case, top_n; test_fail_after_documents_once for retry acceptance.",
+    tags=["day3", "web", "fixture", "silver"], render_template_as_native_obj=True,
+    doc_md="conf: urls (1..5 HTTP(S)), top_n (1..100); omit urls for fixture regression. Static HTML/depth 0, robots enforced.",
 ) as dag:
-    prepare = PythonOperator(
-        task_id="prepare_fixture", python_callable=prepare_fixture,
+    validate = PythonOperator(
+        task_id="validate_config", python_callable=validate_config, retries=0,
         op_kwargs={"dag_id": "{{ dag.dag_id }}", "airflow_run_id": "{{ run_id }}"},
+    )
+    crawl = PythonOperator(
+        task_id="crawl_to_bronze", python_callable=crawl_to_bronze,
+        op_kwargs={"config": "{{ ti.xcom_pull(task_ids='validate_config') }}",
+                   "dag_id": "{{ dag.dag_id }}", "airflow_run_id": "{{ run_id }}"},
+        execution_timeout=timedelta(minutes=8),
     )
     submit = SparkSubmitOperator(
         task_id="spark_clean_validate_count", conn_id="spark_default", pool="spark_single",
         application="/opt/lab/src/jobs/clean_validate_count.py", deploy_mode="client",
         application_args=["--run-id", RUN_ID, "--attempt-id", "spark-{{ ti.try_number }}",
-                          "--fail-after-documents-once", "{{ ti.xcom_pull(task_ids='prepare_fixture')['fail_once'] | lower }}"],
-        name="day2-bronze-silver", executor_memory="1g", driver_memory="1g",
+                          "--fail-after-documents-once", "{{ 'true' if ti.xcom_pull(task_ids='crawl_to_bronze')['fail_once'] else 'false' }}"],
+        name="bronze-silver", executor_memory="1g", driver_memory="1g",
         executor_cores=1, total_executor_cores=1,
         conf={
             "spark.driver.host": "airflow-scheduler", "spark.driver.bindAddress": "0.0.0.0",
@@ -42,7 +49,8 @@ with DAG(
     publish = PythonOperator(task_id="publish_results", python_callable=publish_results,
                              op_kwargs={"run_id": RUN_ID})
     verify = PythonOperator(
-        task_id="verify_output", python_callable=verify_output,
-        op_kwargs={"run_id": RUN_ID, "top_n": "{{ ti.xcom_pull(task_ids='prepare_fixture')['top_n'] }}"},
+        task_id="verify_output", python_callable=verify_ingestion,
+        op_kwargs={"run_id": RUN_ID, "mode": "{{ ti.xcom_pull(task_ids='crawl_to_bronze')['mode'] }}",
+                   "top_n": "{{ ti.xcom_pull(task_ids='crawl_to_bronze')['top_n'] }}"},
     )
-    prepare >> submit >> publish >> verify
+    validate >> crawl >> submit >> publish >> verify

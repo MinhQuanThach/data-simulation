@@ -1,11 +1,104 @@
 # Trạng thái dự án
 
-Cập nhật 2026-10-30, Asia/Saigon. **Ngày 1 và ngày 2 đã hoàn thành, nghiệm thu PASS.
-Ngày 3–7 chưa triển khai.** Nghiệm thu ngày 2 kết thúc lúc **15:14:41**.
+Cập nhật 2026-11-01, Asia/Saigon. **Ngày 1–3 đã hoàn thành, nghiệm thu PASS.
+Ngày 4–7 chưa triển khai.** Ngày 3 kết thúc lúc **19:51:30**.
+Nghiệm thu ngày 2 lịch sử kết thúc lúc 15:14:41 ngày 2026-10-30.
 
 Đã đọc toàn bộ đặc tả/Markdown/repo; tạo migration, Spark clean/tokenize/count,
 transaction publisher, DAG fixture, query top-N, tests và runner ngày 2.
-Đầu vào là fixture viết tay; **chưa crawl web thật**.
+Đó là kết quả ngày 2. Ngày 3 đã có HTML crawl thật như bằng chứng bên dưới.
+
+## Ngày 3: triển khai và bằng chứng
+
+Đã đọc toàn bộ đặc tả/Markdown, cấu trúc/code hiện có; working tree ban đầu sạch.
+Không có AGENTS.md áp dụng trong repo/các thư mục cha đã kiểm tra.
+Thực sự tạo `src/crawler/{config,http,pipeline}.py`, migration `003_day3.sql`,
+runner `scripts/day3.py`, `tests/test_day3.py`, cấu hình URLs nghiệm thu và
+[hướng dẫn ngày 3](docs/day3.md). DAG hiện có năm task validate → crawl → Spark
+→ publish → verify; giữ fixture regression, Spark standalone và transaction publisher.
+
+| Kiểm tra | Kết quả/bằng chứng ngày 3 |
+|---|---|
+| HTTP/config tests | 16 tests Linux PASS: URL/dedup, REP/wildcard/redirect, retry/timeout, charset, gzip/decompressed size, robots/rate limit |
+| Fixture unit tests | 5 tests ngày 2 PASS trong runtime Linux |
+| Bronze transaction | Lỗi sau trang đầu rollback cả batch; retry đủ snapshot; replay không HTTP; phục hồi commit gap và chặn đổi conf PASS |
+| URL 1 | `https://example.com`, HTTP 200, 577 bytes, title Example Domain, 25 tokens; top-5 for/is/this=2, a/and=1 |
+| URL 2 | `https://www.python.org/about/`, HTTP 200, 41.265 bytes, title About Python™ \| Python.org, 708 tokens; top-5 python45/the20/and16/2026=12/news12 |
+| Đổi URL | Hai DagRun tuần tự chỉ khác conf; source hashes không đổi |
+| Nhiều trang | 3 URL nhập, dedup còn 2, 733 tokens; top-2 riêng từng trang, toàn counts giữ nguyên |
+| Web replay | Clear đúng logical date; cả 5 task success, CRAWL_NOOP/TRANSFORM_NOOP/PUBLISH_NOOP; bytes/timestamps/output giữ nguyên |
+| URL lỗi | `/bronze-silver-day3-missing-page`: HTTP 404; Bronze reason http_404; Spark fail sau 2 attempts; downstream upstream_failed; public rows=0; publisher bị chặn |
+| Đối chiếu web | Hash bytes, HTTP/source, số trang/token invariants và host count độc lập từ Silver PASS |
+| Runtime | Driver/worker inventory/pip check/JDBC checksum khớp; cùng image ID ngày 2, không build/thêm dependency |
+| Fixture regression | 5 task success; oracle text/counts/top-3 ngày 2 đúng |
+| Spark retry sau thay DAG | Injected fail sau document staging, up_for_retry thật/public rows=0/publisher blocked; attempt2 dọn staging và success, không duplicate |
+| Sau nghiệm thu | 7/7 service healthy; không còn blocker hoặc thao tác thủ công bắt buộc |
+| Query/tĩnh cuối | psql top-2 trả 4 dòng cho 2 trang; totals25/708; source SHA-256 khớp acceptance, compile/Compose/preparation/imports=[]/diff check PASS |
+
+Run IDs công khai được thử ngày **2026-11-01 khoảng 19:43–19:49 Asia/Saigon**:
+
+| Case | Airflow run / UUID | Application |
+|---|---|---|
+| URL 1 + replay | day3_20261101T124309353742Z / 4e71ca1d-9306-5545-a862-36c577956d09 | app-20261101124333-0001 |
+| URL 2 | day3_20261101T124409707575Z / eb33384e-afb9-53f8-8844-17f5393a211f | app-20261101124438-0002 |
+| Multi/dedup | day3_20261101T124517967719Z / 283c0f50-e08d-5fc8-9c55-200ce118703a | app-20261101124546-0003 |
+| HTTP lỗi | day3_20261101T124642054686Z / a0c17203-dfe1-5884-9e28-62219b9019b6 | app-20261101124710-0004 → app-20261101124828-0005 |
+| Fixture regression | day2_20261101T124904443530Z / 7e1ab0bf-df78-5b29-809b-517c8f7b76a2 | Xem report/executor tại evidence ngày 2 |
+| Fixture targeted retry | day2_20261101T124754703121Z / 8f0e42fa-2fd1-5eae-8275-7199712f0bd7 | Xem retry-incomplete/initial tại evidence ngày 2 |
+
+Evidence: [unit tests HTTP](docs/evidence/day3/unit-day3.txt),
+[fixture tests](docs/evidence/day3/unit-day2.txt),
+[Bronze transaction tests](docs/evidence/day3/bronze-transaction-tests.txt),
+[runtime](docs/evidence/day3/runtime.json), [image IDs](docs/evidence/day3/images.json).
+[Query psql thật](docs/evidence/day3/top-n-psql.txt) hiển thị top-2 theo trang và
+đối chiếu counted_tokens=token_count (25 và 708).
+Mỗi run ở `docs/evidence/day3/<Airflow run>/initial/` có report/source SHA-256,
+task/executor logs, SQL output, `.body` bytes gốc và `.html` đã decode.
+Replay URL 1 lưu tại `replay/`; lỗi có `publish-blocked.txt`.
+Lần web thử đầu cũng PASS: UUID 4869f212-f5c7-5f3b-b621-5f9b33379541,
+app-20261101124044-0000; không dùng lần thử này thay cho nghiệm thu cuối.
+
+Tổng nghiệm thu: [latest.json](docs/evidence/day3/latest.json) đã ghi **PASS** lúc
+19:51:30 ngày 2026-11-01. Targeted fixture retry cũng PASS riêng tại
+[report](docs/evidence/day2/day2_20261101T124754703121Z/initial/report.json) và
+[staging/publish blocked](docs/evidence/day2/day2_20261101T124754703121Z/retry-incomplete.json).
+Fixture regression cuối accept:
+[report](docs/evidence/day2/day2_20261101T124904443530Z/initial/report.json).
+
+Crawler 1.0.0: requests/BeautifulSoup/urllib.robotparser sẵn trong image, depth 0,
+1–5 URL/run; 2 MiB sau giải nén; connect5s/read15s; redirects5; retry2;
+rate ≥1s/hostname hoặc robots delay. Robots trên từng redirect target; lỗi bảo thủ,
+404/410 robots coi là không có policy. Delay/Retry-After vượt ngân sách30s dừng rõ
+reason, không rút ngắn yêu cầu server. Giữ bytes/hash/encoding/HTTP + audit trong
+`bronze.web_pages` và `bronze.fetch_details`. Metadata khóa input_config, requested/
+unique counts, crawl_complete. Replay không recrawl; muốn snapshot mới tạo DagRun.
+
+Policy ngày 3 vẫn fail toàn run nếu có trang lỗi; **chưa quarantine, persisted
+quality hoặc partial** (ngày 4). Roles publisher/catalog/lineage ngày 5,
+telemetry/Grafana ngày 6, cold start/restart/nghiệm thu tuần ngày 7 chưa thực hiện.
+
+Lệnh tái chạy ngày 3:
+
+```powershell
+Set-Location D:\VCB\data-simulation
+docker compose up -d --no-build --wait --wait-timeout 360
+python scripts/day3.py migrate
+python scripts/day3.py run --urls https://example.com --top-n 5
+python scripts/day3.py run --urls https://www.python.org/about/ --top-n 5
+python scripts/day3.py accept
+$day3 = Get-Content docs/evidence/day3/latest.json -Raw | ConvertFrom-Json
+python scripts/day3.py inspect --run-id $day3.first_run --top-n 5
+python scripts/check-preparation.py
+python -m compileall -q src dags scripts tests docker/airflow
+git -c safe.directory=D:/VCB/data-simulation diff --check
+```
+
+Không cần thao tác sửa môi trường thủ công hiện tại. Stack đã dừng trước session,
+được khởi động lại giữ volumes; Docker Linux/x86_64, 4 CPU/7,76 GiB.
+Sandbox exec vẫn lỗi setup refresh; các lệnh ngoài sandbox được auto-review chấp
+thuận. Không sửa ACL/settings hoặc reset dữ liệu. Chưa commit/push.
+
+## Lịch sử ngày 2
 
 ## Kết quả kiểm tra ngày 2
 
@@ -115,6 +208,6 @@ Ngày 1 đã PASS: [latest](docs/evidence/day1/latest.json), [runtime](docs/evid
 [auth/roles](docs/evidence/day1/supplementary.json), [preflight](docs/evidence/preflight-day1-2026-10-30.json),
 vận hành [day1.md](docs/day1.md).
 
-Session tiếp theo **ngày 3** theo [PLAN](PLAN.md): crawler configurable urls/top_n,
-robots/timeout/size/redirect/rate limit, Bronze HTTP/source metadata thật; thử hai URL
-bằng cấu hình, lưu HTML/Silver/top-N evidence. Chưa tự triển khai ngày 3.
+Sau nghiệm thu ngày 3, session tiếp theo làm **ngày 4** theo [PLAN](PLAN.md):
+rules reader versioned, persisted quality/quarantine, partial/all-invalid và invariants.
+Không đánh dấu ngày 4–7 hoàn thành bằng kết quả ngày 3.

@@ -7,6 +7,9 @@ Inventory: [runtime.json](evidence/day1/runtime.json); dependency đầy đủ:
 Ngày 2 giữ nguyên pins/dependencies; inventory và image ID **thực sự của container
 đang chạy** được đo lại tại [day2/runtime.json](evidence/day2/runtime.json).
 Không suy ra image ID hiện tại từ một tag local hoặc từ report lịch sử ngày 1.
+Ngày 3 tiếp tục giữ nguyên pins, không build lại/thêm dependency. Runtime inventory
+và image IDs của container đang chạy được ghi bởi `scripts/day3.py accept` tại
+`docs/evidence/day3/runtime.json` và `images.json`; xem trạng thái tại STATUS.
 Digest dưới đây là manifest riêng linux/amd64, không phải multi-platform index digest.
 Nguồn machine-readable: `config/stack.json`, `docs/evidence/manifest-*.json`.
 

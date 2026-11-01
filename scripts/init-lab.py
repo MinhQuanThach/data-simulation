@@ -22,6 +22,8 @@ with connect("LAB_ADMIN") as conn, conn.cursor() as cur:
     cur.execute(sql.SQL("GRANT USAGE ON SCHEMA bronze TO {}, {}").format(crawler, spark))
     cur.execute(sql.SQL("GRANT SELECT, INSERT ON bronze.web_pages TO {}").format(crawler))
     cur.execute(sql.SQL("GRANT SELECT ON bronze.web_pages TO {}").format(spark))
+    cur.execute(sql.SQL("GRANT SELECT, INSERT ON bronze.fetch_details TO {}").format(crawler))
+    cur.execute(sql.SQL("GRANT SELECT ON bronze.fetch_details TO {}").format(spark))
     cur.execute(sql.SQL("GRANT USAGE ON SCHEMA staging TO {}").format(spark))
     cur.execute(sql.SQL("GRANT SELECT, INSERT, DELETE ON staging.smoke_results TO {}").format(spark))
     # Day 2 shares the job identity with the Python publisher. Split publisher

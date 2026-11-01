@@ -1,9 +1,94 @@
 # Context chuyển session
 
-Cập nhật 2026-10-30, Asia/Saigon. **Ngày 1 và ngày 2 đã hoàn thành có evidence PASS;
-bước tiếp theo là ngày 3.** Ngày 2 nghiệm thu lúc 15:14:41.
-User yêu cầu đọc toàn bộ đặc tả/Markdown/repo, thực sự tạo code/cấu hình ngày 2,
+Cập nhật **2026-11-01, Asia/Saigon**. **Ngày 1–3 đã hoàn thành, nghiệm thu PASS.**
+Ngày 3 kết thúc lúc **19:51:30**; session tiếp theo là **ngày 4**.
+User yêu cầu đọc toàn bộ đặc tả/Markdown/repo, thực sự tạo code/cấu hình ngày 3,
 chỉ báo hoàn thành khi có bằng chứng và cập nhật CONTEXT/PLAN/STATUS. Chưa yêu cầu commit/push.
+
+## Ngày 3: context hiện tại
+
+- Đã đọc toàn bộ đặc tả/Markdown/code; working tree ban đầu sạch. Không thấy
+  AGENTS.md áp dụng. Terminal sandbox vẫn lỗi setup refresh; require_escalated
+  được auto-review chấp thuận. Không sửa ACL/settings hoặc reset dữ liệu.
+- Stack đầu session đang dừng, đã up giữ volumes. Docker Linux/x86_64,
+  CPU4/RAM8330498048 bytes (~7,76GiB); cuối nghiệm thu 7/7 service healthy.
+  Giữ toàn bộ pins ngày1/2; không build lại/thêm dependency/service. Driver/worker
+  pip/runtime/JDBC khớp tại docs/evidence/day3/runtime.json và images.json;
+  cùng image ID c58044bb8b3c60b8d84ec5b0816515a581a201bdaba8d0f2c8845dfa46ed0fdc.
+- Code mới src/crawler/{config,http,pipeline}.py, migration003_day3.sql,
+  scripts/day3.py, tests/test_day3.py, config/day3_acceptance.json, docs/day3.md.
+  Sửa DAG/init grants, top-N per-page, giữ exact fetch_error trong Spark và cập
+  nhật fixture runner kiểm năm task. Working tree hiện có ngày3, chưa commit/push.
+- DAG bronze_to_silver hiện: validate_config → crawl_to_bronze →
+  spark_clean_validate_count → publish_results → verify_output. Native template
+  truyền config dict qua XCom; không HTML/DataFrame. Bỏ urls vẫn chọn fixture.
+- Conf web urls list1..5 **trước dedup**, top_n integer1..100 default3. Trim/bỏ
+  fragment, giữ path/query/order; run/page IDs theo hợp đồng ngày2. HTTP(S)/host,
+  không credentials/control/whitespace nội bộ. Không urls+fixture_case/unknown keys.
+- Crawler1.0.0: requests streaming/gzip/deflate, body≤2MiB sau giải nén,
+  connect5s/read15s, redirects≤5 kiểm robots từng đích, retry≤2 cho mở request/
+  HTTP429/500/502/503/504, backoff1s/2s; rate≥1s/hostname hoặc robots delay/rate.
+  Read body lỗi không giữ prefix; task crawl timeout8phút. User-Agent BronzeSilverLab/1.0.
+  Không implicit .netrc/proxy auth, giữ TLS verify. Robots404/410 absent, lỗi khác
+  conservative; delay/Retry-After>30s hoặc HTTP-date dừng reason riêng, không rút
+  ngắn yêu cầu server. REP matcher hỗ trợ groups/longest match/Allow tie/wildcard/$/
+  percent paths; urllib.robotparser đọc delay/rate. Cache theo origin trong batch.
+- Giữ web_pages 11 cột để tương thích ngày1/2. Bảng mới bronze.fetch_details
+  PK/FK(run,page): raw_body bytea sau giải nén, body_bytes, request/robots history,
+  selected headers JSONB, crawler_version. Hash bytes trước decode/parse; raw_html
+  decode từ HTTP charset hoặc BOM/meta/detect bằng UnicodeDammit. Decode lỗi/NUL
+  giữ bytes, không text lỗi. Body đọc dở/quá giới hạn có bytes/html/hash NULL, bytes0.
+- metadata.pipeline_runs thêm input_config/requested_count/unique_input_count/
+  crawl_complete. Config đã persist khóa theo run. Crawler giữ advisory lock cùng
+  Spark/publisher, Bronze+details commit batch atomic. Metadata commit riêng;
+  retry phục hồi commit gap bằng kiểm keys/details và không HTTP mới. Replay
+  snapshot đã persist không recrawl kể cả lỗi nguồn; muốn nguồn mới tạo DagRun.
+- Spark vẫn extraction/token/count trong standalone executor/JDBC. Top-N riêng
+  từng trang, counts đầy đủ. Verify web kiểm bytes/hash/HTTP/source/versions/
+  số trang/token sums; runner còn đếm độc lập counts từ Silver bằng stdlib host.
+  Lỗi SourceError có code an toàn; code/DB error propagate, không báo thành URL lỗi.
+- Tests PASS: 16 HTTP/config +5 fixture unit Linux tests; local HTTP/DB chứng minh
+  rollback Bronze giữa batch, retry toàn snapshot, replay không HTTP, phục hồi
+  commit gap và chặn đổi conf. Local server test tách khỏi public crawl evidence.
+- `python scripts/day3.py accept` PASS **2026-11-01 19:51:30 Asia/Saigon**;
+  docs/evidence/day3/latest.json. URLs chạy khoảng19:43–19:49, chỉ khác conf:
+  example.com HTTP200/577bytes/25tokens; python.org/about/ HTTP200/41265bytes/708tokens.
+  Source SHA256 không đổi giữa URLs. Multi input3/dedup2/733tokens/top2 per-page.
+  Exact clear/replay web giữ bytes/timestamps/output, cả5 task success/no-op.
+  URL404 có Bronze http_404,2Spark attempts fail/downstream upstream_failed,
+  public rows0/publisher blocked. Fixture regression năm task cũng PASS.
+- UUIDs: first 4e71ca1d-9306-5545-a862-36c577956d09/app-20261101124333-0001;
+  second eb33384e-afb9-53f8-8844-17f5393a211f/app-20261101124438-0002;
+  multi 283c0f50-e08d-5fc8-9c55-200ce118703a/app-20261101124546-0003;
+  invalid a0c17203-dfe1-5884-9e28-62219b9019b6/apps0004→0005;
+  fixture 7e1ab0bf-df78-5b29-809b-517c8f7b76a2. Full Airflow IDs/links tại STATUS.
+  Targeted fixture retry sau thay DAG cũng PASS: UUID8f0e42fa-2fd1-5eae-8275-7199712f0bd7,
+  day2_20261101T124754703121Z: injected fail/up_for_retry/publish blocked/attempt2 success.
+- Evidence ngày3: latest.json, unit-day2.txt/unit-day3.txt,
+  bronze-transaction-tests.txt, runtime.json/images.json/dag-import-errors.json;
+  từng run initial/{report,sql-output}.json, task/executor logs, .body/.html;
+  URL1 replay riêng; lỗi publish-blocked.txt. Fixture/retry ở docs/evidence/day2/.
+  Local evidence bị Git ignore, có runner/tests để tái tạo; không lưu secrets.
+- Thao tác thủ công bắt buộc: **không có**. Stack vẫn chạy, giữ volumes/secrets.
+  Ngày3 vẫn fail toàn run nếu có trang lỗi; **ngày4** mới rules reader versioned,
+  persisted quality/quarantine, partial/all-invalid và các invariants. Ngày5
+  roles/catalog/lineage, ngày6 telemetry/Grafana, ngày7 restart/cold-start chưa làm.
+
+Lệnh hiện tại:
+
+```powershell
+Set-Location D:\VCB\data-simulation
+docker compose up -d --no-build --wait --wait-timeout 360
+python scripts/day3.py migrate
+python scripts/day3.py run --urls https://example.com --top-n 5
+python scripts/day3.py run --urls https://www.python.org/about/ --top-n 5
+python scripts/day3.py accept
+$day3 = Get-Content docs/evidence/day3/latest.json -Raw | ConvertFrom-Json
+python scripts/day3.py inspect --run-id $day3.first_run --top-n 5
+python scripts/day1.py stop
+```
+
+## Nền tảng và lịch sử ngày 1–2
 
 ## Mục tiêu và môi trường
 
@@ -117,10 +202,11 @@ chỉ báo hoàn thành khi có bằng chứng và cập nhật CONTEXT/PLAN/STA
   Các DagRun đỏ trên UI là test có chủ đích, không phải blocker chưa sửa.
 - Ngày1 evidence vẫn docs/evidence/day1/latest.json, runtime.json, supplementary.json.
 - Đã nối Storage–Orchestration–Execution + publish/retry thật, basic Access/control metadata.
-  Chưa crawl web(ngày3), quality/quarantine/partial(ngày4), full permissions/catalog/lineage
+  Ngày3 đã thêm web; quality/quarantine/partial(ngày4), full permissions/catalog/lineage
   (ngày5), telemetry/Grafana(ngày6), restart/cold-start/nghiệm thu tuần(ngày7).
 - Không blocker/thao tác sửa tay bắt buộc ngày2. Stack đang chạy; giữ volumes.
-  Working tree chứa thay đổi ngày2, chưa commit/push.
+  Tại thời điểm nghiệm thu ngày2, working tree chứa thay đổi ngày2 chưa commit/push;
+  ngày3 bắt đầu với working tree sạch. Xem trạng thái hiện tại ở đầu tài liệu.
 
 Lệnh tại D:\VCB\data-simulation:
 
@@ -137,7 +223,7 @@ git -c safe.directory=D:/VCB/data-simulation diff --check
 python scripts/day1.py stop
 ```
 
-Ngày3 tiếp theo: validate urls/top_n, HTTP crawler có robots/timeout/size/redirect/
-retry/rate limit, Bronze giữ cả lỗi nguồn; Spark xử lý input web, verify theo
-invariants thay oracle khi chạy web. Thử hai URL thật bằng cấu hình, lưu HTTP/HTML/
-Silver/top-N evidence. Không dùng fixture giả làm crawl hoặc đánh dấu ngày4–7 xong sớm.
+Ngày4 tiếp theo: rules reader/versioned policy, quality.check_results và quarantine,
+partial/all-invalid/system failure, kiểm valid/empty/script-only/duplicate/HTTP error,
+input=valid+rejected và counts/token invariants. Giữ bằng chứng ngày1–3, không đánh
+dấu ngày4–7 xong sớm. Phần lịch sử ngày1–2 bên trên không thay context hiện tại ngày3.

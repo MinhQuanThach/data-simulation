@@ -122,8 +122,8 @@ def trigger(case="valid_vi", fail_once=False):
     if run["state"] != expected_state:
         raise RuntimeError(f"DAG {run['state']}; expected {expected_state}; see {run['evidence']}")
     if case == "valid_vi":
-        if len(report["tasks"]) != 4 or any(t["state"] != "success" for t in report["tasks"]):
-            raise RuntimeError("Expected all four tasks successful")
+        if len(report["tasks"]) != 5 or any(t["state"] != "success" for t in report["tasks"]):
+            raise RuntimeError("Expected all five tasks successful")
         scheduler("python", "-m", "src.common.pipeline", "verify", "--run-id", run_id)
         if fail_once:
             task = next(t for t in report["tasks"] if t["task_id"] == TASK)
@@ -167,7 +167,7 @@ def accept():
     if "TRANSFORM_NOOP" not in replay_logs or "PUBLISH_NOOP" not in replay_logs:
         raise RuntimeError("Replay did not exercise transform/publish no-op")
     if any(t["state"] != "success" or t["try_number"] < 2 for t in replay_report["tasks"]):
-        raise RuntimeError("Exact-run task clear did not replay all four tasks")
+        raise RuntimeError("Exact-run task clear did not replay all five tasks")
     replay_report["acceptance"] = "PASS"
     save(retry["evidence"] / "replay/report.json", json.dumps(replay_report, indent=2))
     print("PASS published DagRun clear/replay: exact same snapshot and timestamps", flush=True)

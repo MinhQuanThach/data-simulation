@@ -1,0 +1,6 @@
+{
+  "first_url": "https://example.com",
+  "second_url": "https://www.python.org/about/",
+  "error_url": "https://example.com/bronze-silver-day3-missing-page",
+  "top_n": 5
+}

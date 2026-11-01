@@ -17,6 +17,16 @@ active_attempt, staging_complete, application ID, versions, trạng thái và me
 tối thiểu. Các bảng quarantine/quality/catalog/lineage/telemetry còn là kế hoạch.
 Chi tiết implementation và chính sách ngày 2 tại [day2.md](day2.md).
 
+Cập nhật ngày 3: [003_day3.sql](../sql/migrations/003_day3.sql) thêm
+`bronze.fetch_details` PK/FK `(run_id,page_id)` giữ `raw_body bytea` sau giải nén,
+`body_bytes`, `request_history`, `robots_history`, response headers chọn lọc và
+`crawler_version=1.0.0`. `web_pages` giữ nguyên các cột cũ; `raw_html` là text đã
+decode theo HTTP charset hoặc BOM/meta/detect. Không lưu/hash body prefix khi đọc
+dở/vượt giới hạn. Metadata thêm `input_config`, `requested_count`,
+`unique_input_count`, `crawl_complete`; `input_config` khóa cấu hình của snapshot.
+Fixture ngày 1–2 không có fetch_details; web snapshot luôn có cả hai bảng Bronze.
+Replay dùng snapshot đã commit, không HTTP mới. Chi tiết: [day3.md](day3.md).
+
 ## Định danh và snapshot
 
 - `run_id`: UUIDv5 dùng namespace URL chuẩn UUID, name là JSON array compact UTF-8
@@ -61,7 +71,10 @@ Giới hạn response dự kiến 2 MiB sau giải nén (đọc streaming và d�
 timeout connect 5s/read 15s, tối đa 5 redirects, tối đa 2 lần retry cho lỗi tạm thời,
 ít nhất 1s giữa requests cùng host hoặc lâu hơn theo robots crawl-delay.
 Kiểm tra robots cho URL và redirect target, không bypass; lỗi robots xử lý bảo thủ
-và báo reason. Đây là lựa chọn mặc định, sẽ kiểm chứng khi viết crawler ngày 3.
+và báo reason. Crawler ngày 3 đã hiện thực các giới hạn này; delay/Retry-After vượt
+ngân sách 30s thì dừng bằng reason riêng, không rút ngắn yêu cầu server.
+404/410 robots cho phép tiếp tục; robots lỗi khác chặn fetch. Chi tiết/lệnh test
+và trường hợp body đọc dở tại [day3.md](day3.md).
 
 Parser `html.parser`, lấy body text, loại script/style/noscript/template, decode
 entities, NFC rồi collapse whitespace. Body thiếu → reject; parser có thể sửa
@@ -77,7 +90,7 @@ toàn bộ kết quả ngoài Spark rồi khởi động Spark tượng trưng.
 
 ## Quality, retry và publish
 
-Phần dưới là đích hoàn thiện cả tuần. Ngày 2 mới fail toàn run nếu có trang lỗi,
+Phần dưới là đích hoàn thiện cả tuần. Ngày 2–3 vẫn fail toàn run nếu có trang lỗi,
 không publish; chưa persisted quality/quarantine hoặc partial. Transaction publish,
 cleanup attempt, token invariants và published no-op đã hiện thực ngày 2.
 

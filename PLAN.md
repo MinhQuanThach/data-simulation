@@ -1,11 +1,13 @@
 # Kế hoạch thực hiện
 
-Cập nhật 2026-10-30: **chuẩn bị, ngày 1 và ngày 2 đã hoàn thành**. Ngày 2 có fixture
+Cập nhật 2026-11-01: **chuẩn bị và ngày 1–3 đã hoàn thành, nghiệm thu PASS**. Ngày 2 có fixture
 Bronze → Spark standalone → Silver/demo, oracle 12 tokens/8 từ, retry task thật,
 replay cùng run, rollback transaction và empty/script-only rejection PASS.
 7 service healthy, runtime driver/worker khớp; có SQL output và executor logs.
 Evidence tại [STATUS](STATUS.md), [ngày 1](docs/evidence/day1/latest.json),
-[ngày 2](docs/evidence/day2/latest.json). **Ngày 3–7 chưa triển khai**; bước tiếp là ngày 3.
+[ngày 2](docs/evidence/day2/latest.json), [ngày 3](docs/evidence/day3/latest.json).
+Ngày 3 nghiệm thu lúc 19:51:30; hai URL thật, multi/dedup, web replay, URL404 không
+publish, fixture regression và targeted Spark retry PASS. **Ngày 4–7 chưa triển khai**.
 
 Giai đoạn chuẩn bị không tính là ngày 1 hoàn thành. Mỗi ngày trước khi sửa code:
 nêu lại mục tiêu, file dự kiến, tiêu chí xong; cuối ngày cập nhật CONTEXT/STATUS,
@@ -58,14 +60,29 @@ Ngày 2 đã thực hiện và kiểm chứng:
 Chưa làm crawler, quarantine/partial, full catalog/lineage/roles hoặc dashboard trong ngày 2.
 Ngày 2 tạm dùng chung lab_spark cho job/publisher; tách identity/test deny ở ngày 5.
 
-Ngày 3 cần làm tiếp:
+Ngày 3 đã triển khai và kiểm chứng:
 
-1. Validate cấu hình urls/top_n, chuẩn hóa/dedup URL và run/page IDs theo hợp đồng;
+1. [x] Validate cấu hình urls/top_n, chuẩn hóa/dedup URL và run/page IDs theo hợp đồng;
    giữ đường fixture để regression, không dùng oracle fixture để verify trang web.
-2. Crawler HTTP: robots, timeout, response size sau giải nén, redirects/retries giới hạn,
+2. [x] Crawler HTTP: robots, timeout, response size sau giải nén, redirects/retries giới hạn,
    rate limit; Bronze lưu source bytes/hash/encoding/HTTP fields và lỗi theo từng URL.
-3. DAG nhận URLs từ dag_run.conf, crawl → Spark hiện có → publish → verify invariants;
+3. [x] DAG nhận URLs từ dag_run.conf, crawl → Spark hiện có → publish → verify invariants;
    system failure vẫn fail thật, chưa coi partial/quarantine ngày 4 đã hoàn tất.
-4. Chạy URL HTML công khai rồi đổi sang URL thứ hai bằng config, không sửa source;
+4. [x] Chạy URL HTML công khai rồi đổi sang URL thứ hai bằng config, không sửa source;
    lưu bằng chứng HTTP/HTML thật/Silver/top-N, test URL lỗi báo rõ.
-5. Cập nhật docs và CONTEXT/PLAN/STATUS bằng kết quả đã đo; không tự chuyển ngày 4.
+5. [x] Hoàn tất fixture/retry regression và chốt latest.json PASS; cập nhật docs và
+   CONTEXT/PLAN/STATUS bằng kết quả đã đo; không tự triển khai ngày 4.
+
+Files ngày 3: `src/crawler`, migration `003_day3.sql`, DAG năm task,
+`scripts/day3.py`, `tests/test_day3.py`, `config/day3_acceptance.json`, `docs/day3.md`;
+sửa top-N thành per-page, giữ fixture runner phù hợp năm task, giữ runtime/pins cũ.
+
+Ngày 4 tiếp theo:
+
+1. Đọc quality_rules.yaml versioned trong job; thêm quality.check_results và
+   quarantine.rejected_pages, migration additive và quyền cần thiết.
+2. Phân biệt source/page failure với system failure. Publish valid khi partial;
+   all-invalid giữ evidence nhưng fail DAG/không publish.
+3. Kiểm valid/empty/script-only/duplicate/HTTP error, input=valid+rejected,
+   counts dương, tổng token theo trang/run; kiểm retry/publish không lộ nửa dữ liệu.
+4. Giữ bằng chứng ngày 1–3 và cập nhật lại tài liệu bàn giao khi đã kiểm tra.

@@ -1,7 +1,10 @@
 # Vận hành ngày 2: fixture → Silver
 
-Luồng đã hiện thực: `prepare_fixture → spark_clean_validate_count → publish_results
-→ verify_output` trong DAG `bronze_to_silver`. DAG ngày 1 `smoke_bronze` vẫn giữ
+Luồng ngày 2 ban đầu: `prepare_fixture → spark_clean_validate_count → publish_results
+→ verify_output` trong DAG `bronze_to_silver`. Từ ngày 3, hai task
+`validate_config → crawl_to_bronze` thay `prepare_fixture`, tổng cộng năm task;
+không có `urls` thì vẫn chọn fixture. Runner ngày 2 đã cập nhật kiểm năm task.
+DAG ngày 1 `smoke_bronze` vẫn giữ
 để chẩn đoán JDBC. Đầu vào là fixture viết tay; không truy cập domain `.invalid`.
 Kết quả nghiệm thu và run IDs xem [STATUS](../STATUS.md).
 
@@ -21,7 +24,7 @@ runtime local, chạy `python scripts/day1.py up` trước. `migrate` gọi `lab
 bằng admin riêng, áp dụng SQL additive/rerunnable, cấp quyền và giữ lịch sử cũ.
 Không xóa volumes hay sinh lại `.env` đã có.
 
-`run` trigger DagRun mới bằng CLI, đợi Airflow scheduler chạy đủ bốn task,
+`run` trigger DagRun mới bằng CLI, đợi Airflow scheduler chạy đủ năm task hiện tại,
 kiểm tra oracle và executor logs rồi lưu evidence. Spark submit dùng standalone
 `spark://spark-master:7077`, client mode; driver trong scheduler, executor trên worker.
 
@@ -34,7 +37,7 @@ python scripts/day2.py accept
 Bộ này chạy 5 unit tests trong runtime Linux; tạo DagRun fixture bình thường;
 tạo DagRun cố ý lỗi sau khi ghi staging documents và trước khi ghi counts để
 Airflow retry task thật; clear **đúng logical date của DagRun thử nghiệm đó** để
-chạy lại bốn task trên snapshot đã publish; thử rollback/visibility bằng connection
+chạy lại năm task trên snapshot đã publish; thử rollback/visibility bằng connection
 PostgreSQL riêng; cuối cùng chạy fixture empty và script-only, kỳ vọng DAG failed.
 Các DagRun failed có chủ đích được giữ trên UI; đây là kết quả đúng của test lỗi.
 Các snapshot thử nghiệm cũng được giữ để đối chiếu, không phải dữ liệu web thật.
@@ -112,7 +115,8 @@ policy publish partial sẽ làm ở ngày 4; YAML hiện là hợp đồng, ch�
 
 Task không dùng admin: fixture writer dùng `lab_crawler`; Spark và Python publisher
 tạm dùng chung `lab_spark`. Tách publisher identity/ma trận allow–deny thuộc ngày 5.
-Metadata catalog/lineage ngày 5; telemetry/Grafana ngày 6; chưa crawler web ngày 3.
+Metadata catalog/lineage ngày 5; telemetry/Grafana ngày 6. Crawler web ngày 3 và
+snapshot Bronze có bytes/HTTP audit được hướng dẫn riêng ở [day3.md](day3.md).
 Giữ pins/runtime/Compose ngày 1; không thêm service hoặc tải JAR lúc task chạy.
 
 Dừng và giữ dữ liệu: `python scripts/day1.py stop`. Khi lỗi, xem report/task logs,

@@ -67,7 +67,7 @@ def main():
                            .withColumn("token_count", F.size("tokens").cast("long")))
             reason = (F.when(F.col("page_id").isNull() | F.col("source_url").isNull() |
                              (F.length(F.trim("source_url")) == 0), "missing_source")
-                      .when(F.col("fetch_error").isNotNull(), "fetch_error")
+                      .when(F.col("fetch_error").isNotNull(), F.col("fetch_error"))
                       .when(F.col("http_status").isNull() | ~F.col("http_status").between(200, 299), "http_error")
                       .when(F.col("content_type").isNull() |
                             ~F.lower(F.trim(F.split("content_type", ";").getItem(0))).isin("text/html", "application/xhtml+xml"),
