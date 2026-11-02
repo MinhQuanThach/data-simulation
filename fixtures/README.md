@@ -11,4 +11,7 @@ Ngày 1 chỉ seed trang hợp lệ và chứng minh Spark đọc/ghi JDBC. Ngà
 transform/count theo oracle, task retry sau khi staging ghi dở và replay published
 snapshot qua Airflow/Spark standalone/PostgreSQL. Empty/script-only dùng để kiểm
 tra chặn text rỗng; kết quả tại STATUS và docs/evidence/day2/. Các case HTTP/type,
-duplicate, partial/quarantine đầy đủ vẫn chờ nghiệm thu ngày 4.
+duplicate, partial/quarantine có bộ nghiệm thu ngày 4 tại scripts/day4.py.
+Ngày 4 thêm missing_body/no_tokens; mixed/all_invalid là batch các fixture đã nêu.
+HTTP404/unsupported_type dùng body valid với HTTP fields lỗi có chủ đích.
+Xem docs/day4.md và STATUS cho kết quả đã kiểm chứng.

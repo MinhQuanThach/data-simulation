@@ -35,11 +35,14 @@ def crawl_to_bronze(config, dag_id, airflow_run_id, **context):
                 VALUES (%s::uuid,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (run_id) DO NOTHING""",
                 (run_id, dag_id, airflow_run_id, TRANSFORM_VERSION, RULES_VERSION, Json(config),
                  config["requested_count"], config["unique_input_count"]))
-            cur.execute("""SELECT transform_version,rules_version,input_config,crawl_complete
+            cur.execute("""SELECT transform_version,rules_version,publish_status,input_config,crawl_complete
                 FROM metadata.pipeline_runs WHERE run_id=%s::uuid FOR UPDATE""", (run_id,))
             row = cur.fetchone()
             check_versions(row)
-            if row[2] != config:
+            persisted = row[3]
+            if persisted is not None:
+                persisted = dict(persisted, fail_always=persisted.get('fail_always', False))
+            if persisted != config:
                 raise RuntimeError("Snapshot configuration changed; create a new DagRun")
         with closing(connect("CRAWLER")) as conn, conn, conn.cursor() as cur:
             cur.execute("""SELECT b.page_id,d.crawler_version FROM bronze.web_pages b
@@ -51,7 +54,7 @@ def crawl_to_bronze(config, dag_id, airflow_run_id, **context):
                     raise RuntimeError("Incomplete/mismatched Bronze snapshot")
                 print(f"CRAWL_NOOP run_id={run_id}; persisted snapshot reused", flush=True)
             else:
-                if row[3]:
+                if row[4]:
                     raise RuntimeError("Crawl marked complete but Bronze is missing")
                 crawler = Crawler()
                 try:
@@ -77,7 +80,7 @@ def crawl_to_bronze(config, dag_id, airflow_run_id, **context):
         with control, control.cursor() as cur:
             cur.execute("UPDATE metadata.pipeline_runs SET crawl_complete=true WHERE run_id=%s::uuid", (run_id,))
     return {"run_id": run_id, "mode": "web", "top_n": config["top_n"],
-            "fail_once": config["fail_once"], "input_count": config["unique_input_count"]}
+            "fail_once": config["fail_once"], 'fail_always': config.get('fail_always', False), "input_count": config["unique_input_count"]}
 
 
 def web_snapshot(run_id, top_n=3):
@@ -100,8 +103,12 @@ def verify_web(run_id, top_n=3):
     config = meta["input_config"]
     if not meta["crawl_complete"] or meta["publish_status"] != "published":
         raise RuntimeError("Expected completed crawl and published output")
-    if not config or len(bronze) != config["unique_input_count"] or len(docs) != len(bronze) or meta["input_count"] != len(bronze):
+    rejected = snapshot['quarantine']
+    if (not config or len(bronze) != config["unique_input_count"] or len(docs) + len(rejected) != len(bronze)
+            or meta["input_count"] != len(bronze)):
         raise RuntimeError("Input/Bronze/Silver counts differ")
+    if rejected and (meta['quality_status'] != 'partial' or {d['page_id'] for d in docs} & {q['page_id'] for q in rejected}):
+        raise RuntimeError('Partial status or quarantine isolation failed')
     by_page = {b["page_id"]: b for b in bronze}
     if set(by_page) != {page_id(url) for url in config["urls"]}:
         raise RuntimeError("Bronze URL identity mismatch")

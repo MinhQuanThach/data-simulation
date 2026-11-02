@@ -1,5 +1,8 @@
 # Vận hành ngày 2: fixture → Silver
 
+Tài liệu mô tả mốc ngày 2. Từ ngày 4, rules1.1.0 đã được đọc thực sự và thêm
+quality/quarantine/partial; hành vi hiện tại xem [day4.md](day4.md).
+
 Luồng ngày 2 ban đầu: `prepare_fixture → spark_clean_validate_count → publish_results
 → verify_output` trong DAG `bronze_to_silver`. Từ ngày 3, hai task
 `validate_config → crawl_to_bronze` thay `prepare_fixture`, tổng cộng năm task;

@@ -14,7 +14,7 @@ with DAG(
     dag_id="bronze_to_silver", start_date=datetime(2026, 10, 29, tzinfo=timezone.utc),
     schedule=None, catchup=False, max_active_runs=1,
     default_args={"retries": 1, "retry_delay": timedelta(seconds=30)},
-    tags=["day3", "web", "fixture", "silver"], render_template_as_native_obj=True,
+    tags=["day4", "quality", "web", "fixture", "silver"], render_template_as_native_obj=True,
     doc_md="conf: urls (1..5 HTTP(S)), top_n (1..100); omit urls for fixture regression. Static HTML/depth 0, robots enforced.",
 ) as dag:
     validate = PythonOperator(
@@ -31,7 +31,8 @@ with DAG(
         task_id="spark_clean_validate_count", conn_id="spark_default", pool="spark_single",
         application="/opt/lab/src/jobs/clean_validate_count.py", deploy_mode="client",
         application_args=["--run-id", RUN_ID, "--attempt-id", "spark-{{ ti.try_number }}",
-                          "--fail-after-documents-once", "{{ 'true' if ti.xcom_pull(task_ids='crawl_to_bronze')['fail_once'] else 'false' }}"],
+                          "--fail-after-documents-once", "{{ 'true' if ti.xcom_pull(task_ids='crawl_to_bronze')['fail_once'] else 'false' }}",
+                          "--fail-after-documents-always", "{{ 'true' if ti.xcom_pull(task_ids='crawl_to_bronze').get('fail_always', false) else 'false' }}"],
         name="bronze-silver", executor_memory="1g", driver_memory="1g",
         executor_cores=1, total_executor_cores=1,
         conf={

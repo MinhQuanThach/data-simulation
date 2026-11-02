@@ -1,5 +1,68 @@
 # Context chuyển session
 
+## Session ngày 4 hiện tại — đã hoàn thành, PASS (2026-11-01)
+
+Nghiệm thu cuối **23:37:23 Asia/Saigon**, [latest.json](docs/evidence/day4/latest.json).
+**Ngày 1–4 PASS; session tiếp theo làm ngày 5. Ngày 5–7 chưa triển khai.**
+
+Yêu cầu hiện tại: đọc toàn bộ đặc tả/Markdown/repo, triển khai ngày4 thực sự,
+chỉ báo hoàn thành có bằng chứng, cập nhật CONTEXT/PLAN/STATUS. Chưa yêu cầu commit/push.
+Đã đọc tài liệu và code; không thấy AGENTS.md áp dụng; Git ban đầu sạch.
+Sandbox exec vẫn lỗi setup refresh; require_escalated được auto-review chấp thuận;
+không sửa ACL/settings hoặc reset dữ liệu. Stack đầu session 7/7 healthy,
+Docker Linux/x86_64 CPU4/RAM8330498048 bytes. Giữ pins/runtime/volumes/secrets cũ.
+
+Code ngày4: migration004_day4.sql; quality.py/rules1.1.0 reader + canonical SHA256;
+quality.check_results PK(run,attempt,scope,check), quarantine.rejected_pages PK(run,page)
+FK Bronze; metadata thêm quality_status/valid/rejected/rules config/hash.
+Job Spark classify/persist checks, quarantine nguồn lỗi, chỉ valid vào staging;
+all-invalid giữ diagnostics nhưng fail; system failure fail, không biến thành trang lỗi.
+quality_status=valid/partial/all_invalid/system_failure; publish_status giữ published
+cho mọi output đã commit (cả partial), failed cho run lỗi. Demo view không cần đổi.
+Publisher kiểm quality gate + SQL coverage/count/token/source/hash/attempt/overlap,
+commit Silver/demo/publish flag một transaction. Retry cleanup staging/quarantine
+chỉ run chưa publish; check history theo attempt. Published replay no-op.
+Fixture mixed/all_invalid/http_error/missing_body/no_tokens/unsupported_type bổ sung;
+HTTP fixtures là viết tay, không crawl. Fault flags once/always có mục đích kiểm thử.
+
+Nghiệm thu: scripts/day4.py accept, docs/day4.md; tests policy + DB guards + Spark
+standalone fault tại JDBC read để kiểm duplicate vì PK Bronze chặn insert trùng.
+Runner kiểm source hashes không đổi trong accept; latest.json chỉ ghi sau đủ PASS.
+Kết quả cuối: 26 unit tests Linux; valid fixture12tokens/8words; mixed5=valid1+
+rejected4; Airflow up_for_retry thật/publish blocked và exact partial replay giữ nguyên.
+All-invalid5=0+5, unsupported type và system failure cả2attempts đều DAGfailed,
+downstream upstream_failed/publicrows0. Duplicate Bronze bị PK chặn; duplicate
+Spark fault có unique_keys=fail, không publish. Standalone còn kiểm token threshold,
+missing source và fetch_error rỗng. Transaction tests chặn counts sai, Bronze count
+sai, rules hash drift; reader khác không thấy uncommitted; rollback cả2bảng rồi
+retry/no-op PASS. Test dùng đúng SELECT/INSERT/DELETE, không mở thêm quyền staging.
+Web thật input3/dedup2=valid1+rejected1, 25tokens; HTTP200/404 cùng body577bytes/hash
+nhưng chỉ HTTP200 vào Silver. Source hashes không đổi trong bộ accept cuối.
+7/7services healthy; inventory driver/worker/pip/JDBC khớp, imageID vẫn c58044...fdc.
+Evidence local docs/evidence/day4 Git ignore; có report/SQL/task/executor logs,
+retry/replay, quality-psql.txt, transaction/Spark tests, runtime/images/environment,
+web-bronze-output.json và bytes/HTML thật. Chi tiết xem STATUS/day4.md.
+
+Run UUIDs cuối: normal c2b779b4-d32d-521f-95d8-5bfd106a8a34;
+partial/retry/replay e339b8cb-4c59-51ed-bec8-55d7fe47c9e1;
+all-invalid66be8bcf-f249-5fc2-8e03-d6d22e670a56;
+type14e35395-f300-5176-a58b-0a11c5481197;
+system8eecf57b-ae0b-5ea3-bf57-8945f3eaea57;
+web29135595-89ed-51da-8ed8-cc5e1ef370ae. Spark duplicate87e2a316-65cf-5c66-b56b-42200f6722af,
+transactionf8fcecb0-8915-41d5-8e40-c95215c168e8. App IDs và Airflow IDs tại STATUS/handoff-summary.json.
+Ngày5 roles publisher/observer + catalog/lineage; ngày6 telemetry/Grafana;
+ngày7 cold start/restart/nghiệm thu tuần vẫn chưa làm. Không có blocker thủ công hiện tại.
+Ngày5: tách publisher identity/connections/secrets local khỏi job; observer readonly;
+allow/deny tests bằng từng role thật; đồng bộ datasets/schema/owner và lineage
+Bronze→Spark app→Silver/demo theo run/versions/rules hash. Admin chỉ seed/migration.
+
+Lệnh: python scripts/day4.py migrate; python scripts/day4.py run --case mixed;
+python scripts/day4.py accept; python scripts/day4.py inspect --run-id <UUID>.
+Khởi động docker compose up -d --no-build --wait --wait-timeout 360;
+dừng giữ dữ liệu python scripts/day1.py stop. Chưa commit/push.
+
+## Lịch sử bàn giao ngày 1–3 (không thay trạng thái hiện tại ở trên)
+
 Cập nhật **2026-11-01, Asia/Saigon**. **Ngày 1–3 đã hoàn thành, nghiệm thu PASS.**
 Ngày 3 kết thúc lúc **19:51:30**; session tiếp theo là **ngày 4**.
 User yêu cầu đọc toàn bộ đặc tả/Markdown/repo, thực sự tạo code/cấu hình ngày 3,

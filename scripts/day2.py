@@ -42,7 +42,7 @@ def task_states(airflow_run_id):
 
 def logs(airflow_run_id):
     # IDs are generated locally and constrained before interpolation.
-    if not re.fullmatch(r"day2_[A-Za-z0-9_]+", airflow_run_id):
+    if not re.fullmatch(r"day[234]_[A-Za-z0-9_]+", airflow_run_id):
         raise ValueError("Unexpected acceptance DagRun ID")
     return scheduler("python", "-c",
                      "from pathlib import Path; p=Path('/opt/airflow/logs/dag_id=" + DAG + "/run_id=" + airflow_run_id + "'); "

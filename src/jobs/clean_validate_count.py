@@ -1,15 +1,16 @@
 """Real standalone Spark transform and complete per-page word counts over JDBC."""
 import argparse
-import json
 import os
 import re
 from uuid import UUID
+from psycopg2.extras import Json
 
-from pyspark.sql import SparkSession, functions as F, types as T
+from pyspark.sql import SparkSession, functions as F
 
 from src.common.pipeline import check_versions, locked_run, validate_staging
 from src.common.smoke import master_state
-from src.common.transform import extract_html, tokenize, TRANSFORM_VERSION
+from src.common.transform import TRANSFORM_VERSION
+from src.common.quality import classify, load_rules, record_check
 
 
 def main():
@@ -17,6 +18,7 @@ def main():
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--attempt-id", required=True)
     parser.add_argument("--fail-after-documents-once", choices=("true", "false"), default="false")
+    parser.add_argument("--fail-after-documents-always", choices=("true", "false"), default="false")
     args = parser.parse_args()
     run_id = str(UUID(args.run_id))
     attempt = args.attempt_id
@@ -34,10 +36,20 @@ def main():
                 return
             cur.execute("DELETE FROM staging.word_counts WHERE run_id=%s", (run_id,))
             cur.execute("DELETE FROM staging.documents WHERE run_id=%s", (run_id,))
+            cur.execute('DELETE FROM quarantine.rejected_pages WHERE run_id=%s::uuid', (run_id,))
             cur.execute("""UPDATE metadata.pipeline_runs SET active_attempt=%s,
                 staging_complete=false,publish_status='running',spark_application_id=NULL,
-                input_count=NULL,total_tokens=NULL,error_summary=NULL WHERE run_id=%s::uuid""", (attempt, run_id))
+                input_count=NULL,total_tokens=NULL,valid_count=NULL,rejected_count=NULL,
+                quality_status='pending',error_summary=NULL WHERE run_id=%s::uuid""", (attempt, run_id))
         try:
+            rules, rules_hash = load_rules()
+            with conn, conn.cursor() as cur:
+                cur.execute('SELECT rules_sha256 FROM metadata.pipeline_runs WHERE run_id=%s::uuid', (run_id,))
+                old_hash = cur.fetchone()[0]
+                if old_hash is not None and old_hash != rules_hash:
+                    raise RuntimeError('Rules changed; create a new DagRun')
+                cur.execute('UPDATE metadata.pipeline_runs SET rules_config=%s,rules_sha256=%s WHERE run_id=%s::uuid',
+                            (Json(rules), rules_hash, run_id))
             master_state()
             spark = SparkSession.builder.appName(f"bronze-silver-{run_id}-{attempt}").getOrCreate()
             if spark.sparkContext.master != "spark://spark-master:7077":
@@ -56,32 +68,44 @@ def main():
             input_count = bronze.count()
             if not 1 <= input_count <= 5:
                 raise RuntimeError("Expected 1..5 Bronze rows")
-            if bronze.select("run_id", "page_id").distinct().count() != input_count:
+            unique_count = bronze.select("run_id", "page_id").distinct().count()
+            with conn, conn.cursor() as cur:
+                record_check(cur, run_id, attempt, '@run', 'unique_keys', unique_count == input_count,
+                             unique_count, input_count)
+            if unique_count != input_count:
                 raise RuntimeError("duplicate_key")
-            parsed_schema = T.StructType([T.StructField(name, T.StringType(), False)
-                                          for name in ("title", "clean_text", "reason")])
-            parse_udf = F.udf(extract_html, parsed_schema)
-            token_udf = F.udf(tokenize, T.ArrayType(T.StringType(), False))
-            transformed = (bronze.withColumn("parsed", parse_udf("raw_html"))
-                           .withColumn("tokens", token_udf("parsed.clean_text"))
-                           .withColumn("token_count", F.size("tokens").cast("long")))
-            reason = (F.when(F.col("page_id").isNull() | F.col("source_url").isNull() |
-                             (F.length(F.trim("source_url")) == 0), "missing_source")
-                      .when(F.col("fetch_error").isNotNull(), F.col("fetch_error"))
-                      .when(F.col("http_status").isNull() | ~F.col("http_status").between(200, 299), "http_error")
-                      .when(F.col("content_type").isNull() |
-                            ~F.lower(F.trim(F.split("content_type", ";").getItem(0))).isin("text/html", "application/xhtml+xml"),
-                            "unsupported_content_type")
-                      .when(F.col("parsed.reason") != "", F.col("parsed.reason"))
-                      .when(F.col("token_count") <= 0, "no_tokens")
-                      .otherwise(""))
-            transformed = transformed.withColumn("reject_reason", reason).cache()
-            rejected = transformed.filter(F.col("reject_reason") != "").select("page_id", "reject_reason").collect()
-            if rejected:
-                print("QUALITY_REJECTED " + json.dumps([r.asDict() for r in rejected]), flush=True)
-                # Day-2 policy fails the fixture run. Per-page quarantine/partial
-                # policy and persisted check results are implemented on day 4.
-                raise RuntimeError("quality_rejected: " + ",".join(sorted({r.reject_reason for r in rejected})))
+            transformed = classify(bronze, rules).cache()
+            check_columns = [c for c in transformed.columns if c.startswith('check_')]
+            observations = transformed.select('page_id', 'reject_reason', 'token_count', 'http_status',
+                                               'content_type', *check_columns).collect()
+            rejected = [r for r in observations if r.reject_reason]
+            valid_count = input_count - len(rejected)
+            quality_status = 'all_invalid' if not valid_count else 'partial' if rejected else 'valid'
+            thresholds = {'required_fields': rules['checks']['required_fields'], 'fetch_success': 'no fetch_error',
+                          'http_status': [rules['checks']['http_status_min'], rules['checks']['http_status_max']],
+                          'content_type': rules['checks']['supported_content_types'], 'parse_body': 'body required',
+                          'nonempty_clean_text': 'length > 0', 'min_token_count': rules['checks']['min_token_count'],
+                          'content_hash': 'SHA256 hex'}
+            with conn, conn.cursor() as cur:
+                for item in observations:
+                    for column in check_columns:
+                        name = column.removeprefix('check_')
+                        observed = {'http_status': item.http_status, 'content_type': item.content_type,
+                                    'min_token_count': item.token_count}.get(name, item[column])
+                        record_check(cur, run_id, attempt, item.page_id, name, item[column], observed, thresholds[name])
+                    if item.reject_reason:
+                        cur.execute('''INSERT INTO quarantine.rejected_pages
+                            (run_id,page_id,attempt_id,reason,rules_version) VALUES (%s::uuid,%s,%s,%s,%s)''',
+                            (run_id, item.page_id, attempt, item.reject_reason, rules['rules_version']))
+                record_check(cur, run_id, attempt, '@run', 'input_balance', input_count == valid_count + len(rejected),
+                             input_count, {'valid': valid_count, 'rejected': len(rejected)})
+                record_check(cur, run_id, attempt, '@run', 'has_valid_pages', valid_count > 0, valid_count, '>0')
+                cur.execute('''UPDATE metadata.pipeline_runs SET input_count=%s,valid_count=%s,rejected_count=%s,
+                    quality_status=%s,total_tokens=0 WHERE run_id=%s::uuid''',
+                    (input_count, valid_count, len(rejected), quality_status, run_id))
+            if not valid_count:
+                raise RuntimeError('all_invalid: ' + ','.join(sorted({r.reject_reason for r in rejected})))
+            transformed = transformed.filter(F.col('reject_reason') == '')
             total_tokens = transformed.agg(F.sum("token_count")).first()[0]
             docs = transformed.select(
                 "run_id", F.lit(attempt).alias("attempt_id"), "page_id", "source_url", "content_hash",
@@ -93,12 +117,22 @@ def main():
                       .withColumn("attempt_id", F.lit(attempt))
                       .select("run_id", "attempt_id", "page_id", "word", "count"))
             docs.coalesce(1).write.jdbc(jdbc_url, "staging.documents", mode="append", properties=props)
-            if args.fail_after_documents_once == "true" and attempt == "spark-1":
+            if args.fail_after_documents_always == 'true' or (args.fail_after_documents_once == "true" and attempt == "spark-1"):
                 print(f"INJECTED_FAILURE_AFTER_DOCUMENTS run_id={run_id} application_id={app_id}", flush=True)
                 raise RuntimeError("Injected acceptance failure after documents staging, before word counts")
             counts.coalesce(1).write.jdbc(jdbc_url, "staging.word_counts", mode="append", properties=props)
+            try:
+                with conn, conn.cursor() as cur:
+                    validate_staging(cur, run_id, attempt, input_count, total_tokens, len(rejected))
+            except Exception:
+                with conn, conn.cursor() as cur:
+                    record_check(cur, run_id, attempt, '@run', 'staging_invariants', False, 'staging mismatch',
+                                 'input=valid+rejected; positive counts; per-page token sum; source/version')
+                raise
             with conn, conn.cursor() as cur:
-                validate_staging(cur, run_id, attempt, input_count, total_tokens)
+                record_check(cur, run_id, attempt, '@run', 'staging_invariants', True,
+                             {'input': input_count, 'valid': valid_count, 'rejected': len(rejected), 'total_tokens': total_tokens},
+                             'input=valid+rejected; positive counts; per-page token sum; source/version')
                 cur.execute("""UPDATE metadata.pipeline_runs SET staging_complete=true,
                     publish_status='staged',input_count=%s,total_tokens=%s
                     WHERE run_id=%s::uuid AND active_attempt=%s""", (input_count, total_tokens, run_id, attempt))
@@ -111,7 +145,12 @@ def main():
             # Store a safe reason, never JDBC messages/connection credentials.
             summary = str(error) if isinstance(error, RuntimeError) else type(error).__name__
             with conn, conn.cursor() as cur:
+                cur.execute('SELECT quality_status FROM metadata.pipeline_runs WHERE run_id=%s::uuid', (run_id,))
+                if cur.fetchone()[0] != 'all_invalid':
+                    record_check(cur, run_id, attempt, '@run', 'system_failure', False,
+                                 'attempt failed', 'successful execution required')
                 cur.execute("""UPDATE metadata.pipeline_runs SET publish_status='failed',
+                    quality_status=CASE WHEN quality_status='all_invalid' THEN quality_status ELSE 'system_failure' END,
                     staging_complete=false,error_summary=%s WHERE run_id=%s::uuid AND active_attempt=%s""",
                     (summary[:500], run_id, attempt))
             raise

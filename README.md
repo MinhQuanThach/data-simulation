@@ -3,7 +3,11 @@
 Lab local để học tương tác của 7 block Data Engineering bằng HTML thật.
 Đặc tả gốc: [bronze_silver_7day_project_prompt.md](bronze_silver_7day_project_prompt.md).
 
-**Trạng thái 2026-11-01: ngày 1–3 đã hoàn thành, nghiệm thu PASS.**
+**Trạng thái 2026-11-01: ngày 1–4 đã hoàn thành, nghiệm thu PASS.**
+Ngày4 accept PASS23:37:23: 26unit tests, quality/quarantine/partial, all-invalid/system
+failure, retry/replay/atomic publish và web partial thật; bằng chứng tại STATUS.
+Rules reader, quality/quarantine và partial/all-invalid: [vận hành ngày 4](docs/day4.md).
+Kết quả mới nhất luôn xem [STATUS](STATUS.md).
 Đã có Compose/runtime Airflow–Spark, DAG JDBC smoke và DAG fixture → Spark clean/
 tokenize/count → transaction publish Silver/demo. Text/counts, retry task thật,
 replay cùng DagRun và rollback publish đã kiểm tra; kết quả đầy đủ tại [STATUS](STATUS.md).
@@ -21,6 +25,8 @@ Ngày 3 đã thêm crawler nhận `urls` từ DAG conf; xem kết quả xác min
 7. [Vận hành ngày 2](docs/day2.md): fixture/Silver, migration, nghiệm thu retry/rollback/top-N.
 8. [Vận hành ngày 3](docs/day3.md): URL configurable, crawler/robots, bytes Bronze,
    test HTTP thật, replay và evidence web.
+9. [Vận hành ngày 4](docs/day4.md): rules reader, quality/quarantine, policy partial,
+   all-invalid/system failure và nghiệm thu retry/invariants.
 
 Khởi động và kiểm tra ngày 1:
 
@@ -85,7 +91,8 @@ python scripts/day3.py accept
 DAG hiện có năm task validate/crawl/Spark/publish/verify. Bỏ `urls` để chạy lại
 fixture. `top_n` giới hạn từng trang, toàn bộ counts giữ lại. Mỗi URL duy nhất có
 Bronze row kể cả lỗi; ngày 3 vẫn fail toàn run khi có trang lỗi, không publish.
-Quarantine/partial, catalog/lineage và Grafana còn chờ ngày 4–6.
+Hành vi trên là mốc ngày 3; ngày 4 thay bằng quarantine/publish phần hợp lệ.
+Catalog/lineage và Grafana còn chờ ngày 5–6.
 Worker dùng chung image Airflow để đồng nhất Python 3.11; đây là giản lược cho lab.
 Hai PostgreSQL giữ volume riêng; admin chỉ init, task dùng role crawler/job riêng.
 Ngày 2 Spark và publisher tạm dùng chung role job; tách publisher và test deny ở ngày 5.

@@ -1,13 +1,13 @@
 # Kế hoạch thực hiện
 
-Cập nhật 2026-11-01: **chuẩn bị và ngày 1–3 đã hoàn thành, nghiệm thu PASS**. Ngày 2 có fixture
+Cập nhật 2026-11-01: **ngày 1–4 đã hoàn thành, nghiệm thu PASS**. Ngày 2 có fixture
 Bronze → Spark standalone → Silver/demo, oracle 12 tokens/8 từ, retry task thật,
 replay cùng run, rollback transaction và empty/script-only rejection PASS.
 7 service healthy, runtime driver/worker khớp; có SQL output và executor logs.
 Evidence tại [STATUS](STATUS.md), [ngày 1](docs/evidence/day1/latest.json),
 [ngày 2](docs/evidence/day2/latest.json), [ngày 3](docs/evidence/day3/latest.json).
 Ngày 3 nghiệm thu lúc 19:51:30; hai URL thật, multi/dedup, web replay, URL404 không
-publish, fixture regression và targeted Spark retry PASS. **Ngày 4–7 chưa triển khai**.
+publish, fixture regression và targeted Spark retry PASS. **Ngày 5–7 chưa triển khai**.
 
 Giai đoạn chuẩn bị không tính là ngày 1 hoàn thành. Mỗi ngày trước khi sửa code:
 nêu lại mục tiêu, file dự kiến, tiêu chí xong; cuối ngày cập nhật CONTEXT/STATUS,
@@ -77,12 +77,23 @@ Files ngày 3: `src/crawler`, migration `003_day3.sql`, DAG năm task,
 `scripts/day3.py`, `tests/test_day3.py`, `config/day3_acceptance.json`, `docs/day3.md`;
 sửa top-N thành per-page, giữ fixture runner phù hợp năm task, giữ runtime/pins cũ.
 
-Ngày 4 tiếp theo:
+Ngày 4 đã kiểm chứng, accept PASS lúc23:37:23 ngày2026-11-01:
 
-1. Đọc quality_rules.yaml versioned trong job; thêm quality.check_results và
+1. [x] Đọc quality_rules.yaml1.1.0 versioned trong job; persist config/hash; thêm quality.check_results và
    quarantine.rejected_pages, migration additive và quyền cần thiết.
-2. Phân biệt source/page failure với system failure. Publish valid khi partial;
+2. [x] Phân biệt source/page failure với system failure. Publish valid khi partial;
    all-invalid giữ evidence nhưng fail DAG/không publish.
-3. Kiểm valid/empty/script-only/duplicate/HTTP error, input=valid+rejected,
+3. [x] 26unit tests + Airflow/Spark/SQL: valid/empty/script-only/duplicate/HTTP error, input=valid+rejected,
    counts dương, tổng token theo trang/run; kiểm retry/publish không lộ nửa dữ liệu.
-4. Giữ bằng chứng ngày 1–3 và cập nhật lại tài liệu bàn giao khi đã kiểm tra.
+4. [x] Web thật partial/dedup, exact replay, system failure2attempts, token/Bronze count/rules drift,
+   atomic rollback/visibility PASS; 7services healthy/runtime khớp. Giữ evidence ngày1–3;
+   cập nhật README/docs/CONTEXT/PLAN/STATUS; latest tại docs/evidence/day4/latest.json.
+
+Ngày 5 tiếp theo (chưa triển khai):
+
+1. Tách publisher connection/credentials/GRANT khỏi Spark; observer readonly;
+   giữ crawler chỉ ghi Bronze và admin chỉ seed/migration.
+2. Đồng bộ datasets/schema/owner từ config và lineage Bronze→Spark app→Silver/demo
+   theo run_id, transform/rules version/hash và publish status.
+3. Test allow/deny thật bằng mỗi role; query lineage một run đã publish.
+4. Cập nhật tài liệu/bằng chứng; không đánh dấu monitoring/ngày6 hoặc cold-start/ngày7 xong sớm.

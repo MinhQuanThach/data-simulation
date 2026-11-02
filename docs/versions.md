@@ -1,5 +1,10 @@
 # Phiên bản đã khóa và kiểm chứng ngày 1
 
+Ngày 4 giữ nguyên image/dependency pins; PyYAML6.0.3 đã có trong direct requirements
+và image, không cài thêm khi task chạy. Rules đổi sang1.1.0, transform giữ1.0.0.
+Inventory/image IDs kiểm tra lại tại docs/evidence/day4/runtime.json và images.json;
+trạng thái nghiệm thu xem STATUS.
+
 Ngày chọn: 2026-10-29, target linux/amd64. Không chọn version chỉ dựa vào trang latest.
 **Đã pull/build và chạy smoke ngày 1 thành công; Grafana mới xác minh nguồn, chưa chạy.**
 Inventory: [runtime.json](evidence/day1/runtime.json); dependency đầy đủ:

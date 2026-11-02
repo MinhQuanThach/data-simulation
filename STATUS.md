@@ -1,5 +1,94 @@
 # Trạng thái dự án
 
+## Ngày 4 đã hoàn thành — nghiệm thu PASS
+
+**Ngày 1–4 PASS.** `python scripts/day4.py accept` kết thúc exit0 lúc
+**23:37:23 ngày 2026-11-01 Asia/Saigon**. Báo cáo cuối:
+[latest.json](docs/evidence/day4/latest.json), [tóm tắt runs](docs/evidence/day4/handoff-summary.json).
+Source fingerprints không đổi trong bộ nghiệm thu cuối. Giữ evidence lịch sử ngày1–3;
+các lần thử chưa chạy trọn bộ không thay báo cáo cuối này.
+
+Code/config: rules reader1.1.0, migration004_day4.sql, quality.check_results,
+quarantine.rejected_pages, Spark classification/checks, SQL publication gate,
+fixtures/fault tests và [runner](scripts/day4.py). Transform vẫn1.0.0; không thêm
+dependency/service/build. Migration additive chạy lại exit0 trên volume hiện có.
+Policy/schema/lệnh chi tiết tại [day4.md](docs/day4.md).
+
+| Kiểm tra | Kết quả quan sát |
+|---|---|
+| Unit Linux | 26 tests PASS: fixture5, crawler/config16, policy5 |
+| Valid fixture | Silver đúng oracle, 12tokens/8words, cả5task success |
+| Partial | input5=valid1+rejected4, 12tokens; empty/script-only/HTTP404/missing-body có reason, không vào Silver |
+| Retry/replay | Spark attempt1 ghi1document/0counts rồi fail; quan sát up_for_retry/publish refused; attempt2 cleanup và publish; exact clear/replay giữ data/checks/quarantine/timestamps/app ID |
+| All-invalid | input5=0+5, gồm no_tokens; 2Spark attempts failed, DAG failed, publish/verify upstream_failed; publicrows0 |
+| HTTP/type | HTTP404 và unsupported_content_type cách ly kể cả body có text hợp lệ |
+| System failure | Fault sau documents ở cả2attempts; system_failure, DAGfailed/publicrows0; không đổi thành trang lỗi nguồn |
+| Duplicate | Bronze PK từ chối insert; Spark JDBC-read fault unique_keys=fail, publisher chặn, publicrows0 |
+| Dynamic rules | Reader validate/hash; Spark thực thi min token threshold; missing source và fetch_error rỗng đều reject |
+| SQL invariants | Publisher chặn token counts bị sửa sai, Bronze input count sai, rules hash drift; input=valid+rejected, không overlap/attempt cũ, token sums theo trang/run đúng |
+| Atomic publish | Reader khác không thấy uncommitted; fault giữa publish rollback Silver/demo/metadata; retry success rồi no-op |
+| Web thật | input3/dedup2=1valid+1rejected, 25tokens, status partial/published; HTTP200/404 cùng body577bytes nhưng chỉ200 vào Silver |
+| Runtime | 7/7service healthy; driver/worker Python3.11.16/Java17.0.17/Spark4.0.2/provider5.5.0, pip/JDBC inventory khớp |
+
+Các run cuối, đều có report/SQL output/task và executor logs trong
+`docs/evidence/day4/<Airflow ID>/initial/`:
+
+| Case | Airflow ID / UUID | Spark application |
+|---|---|---|
+| Valid | day4_20261101T162528223163Z / c2b779b4-d32d-521f-95d8-5bfd106a8a34 | app-20261101162552-0039 |
+| Partial/retry/replay | day4_20261101T162629007765Z / e339b8cb-4c59-51ed-bec8-55d7fe47c9e1 | app-20261101162652-0040 → app-20261101162753-0041 |
+| All-invalid | day4_20261101T162852014340Z / 66be8bcf-f249-5fc2-8e03-d6d22e670a56 | app-20261101162908-0042 → app-20261101163004-0043 |
+| Type | day4_20261101T163030132776Z / 14e35395-f300-5176-a58b-0a11c5481197 | app-20261101163054-0044 → app-20261101163158-0045 |
+| System failure | day4_20261101T163240950409Z / 8eecf57b-ae0b-5ea3-bf57-8945f3eaea57 | app-20261101163304-0046 → app-20261101163430-0047 |
+| Web partial | day4_20261101T163555779838Z / 29135595-89ed-51da-8ed8-cc5e1ef370ae | app-20261101163623-0050 |
+
+Standalone policy app-20261101163525-0048; duplicate app-20261101163547-0049,
+UUID87e2a316-65cf-5c66-b56b-42200f6722af. Transaction snapshot riêng
+f8fcecb0-8915-41d5-8e40-c95215c168e8, không sửa snapshot đã publish của run nguồn.
+
+Bằng chứng bổ sung: [quality psql](docs/evidence/day4/quality-psql.txt),
+[transaction](docs/evidence/day4/transaction-tests.txt),
+[duplicate/policy Spark](docs/evidence/day4/spark-policy-duplicate-tests.txt),
+[Bronze regression](docs/evidence/day4/bronze-transaction-regression.txt),
+[runtime](docs/evidence/day4/runtime.json), [images](docs/evidence/day4/images.json),
+[environment](docs/evidence/day4/environment.json), [kiểm tra tĩnh](docs/evidence/day4/static-checks.json).
+Web thật có [Bronze JSON](docs/evidence/day4/web-bronze-output.json) và .body/.html
+theo page SHA256, nguồn example.com và /bronze-silver-day3-missing-page lúc23:35–23:37.
+Hai response đều577bytes, SHA25625ddf2c883e0d1958ea971d279a7e4f0fd446724ee3db7db19dadabd4a62e484;
+quyết định reject404 dựa HTTP status, không dựa nội dung body.
+
+Quality history giữ từng attempt, quarantine giữ attempt hiện tại. `partial` nằm ở
+quality_status; publish_status của mọi output đã commit vẫn published. Không backfill
+quality giả cho lịch sử ngày1–3. Spark/publisher tạm chung lab_spark; quyền publisher/
+observer và catalog/lineage ngày5, telemetry/Grafana ngày6, cold-start/restart ngày7
+**chưa thực hiện**. Các DagRun đỏ ở trên là negative tests có chủ đích.
+
+**Không còn blocker/thao tác thủ công bắt buộc cho ngày4.** Stack vẫn chạy, giữ volumes
+và secrets cũ; Docker Linux/x86_64 CPU4/RAM8330498048 bytes. Image driver/worker vẫn
+c58044bb8b3c60b8d84ec5b0816515a581a201bdaba8d0f2c8845dfa46ed0fdc.
+Sandbox exec lỗi setup refresh, lệnh ngoài sandbox được auto-review chấp thuận;
+không sửa ACL/settings, không reset dữ liệu hoặc mở thêm quyền staging. Chưa commit/push.
+Evidence local bị Git ignore; code/tests/runner tái tạo được.
+
+```powershell
+Set-Location D:\VCB\data-simulation
+docker compose up -d --no-build --wait --wait-timeout 360
+python scripts/day4.py migrate
+python scripts/day4.py run --case mixed
+python scripts/day4.py accept
+$day4 = Get-Content docs/evidence/day4/latest.json -Raw | ConvertFrom-Json
+python scripts/day4.py inspect --run-id $day4.partial_retry_replay_run
+python scripts/day3.py inspect --run-id $day4.web_partial_run
+python scripts/check-preparation.py
+python -m compileall -q src dags scripts tests docker/airflow
+git -c safe.directory=D:/VCB/data-simulation diff --check
+```
+
+Query quality/token sums theo lệnh tại docs/day4.md; dừng giữ dữ liệu:
+`python scripts/day1.py stop`. Session tiếp theo: **ngày5** theo PLAN.
+
+## Lịch sử ngày 1–3
+
 Cập nhật 2026-11-01, Asia/Saigon. **Ngày 1–3 đã hoàn thành, nghiệm thu PASS.
 Ngày 4–7 chưa triển khai.** Ngày 3 kết thúc lúc **19:51:30**.
 Nghiệm thu ngày 2 lịch sử kết thúc lúc 15:14:41 ngày 2026-10-30.

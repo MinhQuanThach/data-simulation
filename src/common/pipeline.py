@@ -5,9 +5,11 @@ import hashlib
 import json
 from pathlib import Path
 from uuid import UUID
+from psycopg2.extras import Json
 
 from src.common.smoke import connect, master_state, run_uuid
 from src.common.transform import RULES_VERSION, TRANSFORM_VERSION
+from src.common.quality import load_rules, quality_snapshot
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLISHED = "published"
@@ -30,53 +32,64 @@ def locked_run(run_id):
 
 
 def check_versions(row):
-    if row is None or tuple(row[:2]) != (TRANSFORM_VERSION, RULES_VERSION):
+    historical = row is not None and len(row) > 2 and row[2] == PUBLISHED and tuple(row[:2]) == ('1.0.0', '1.0.0')
+    if not historical and (row is None or tuple(row[:2]) != (TRANSFORM_VERSION, RULES_VERSION)):
         raise RuntimeError("Missing pipeline run or incompatible transform/rules versions")
 
 
 def prepare_fixture(dag_id, airflow_run_id, **context):
-    conf = context["dag_run"].conf or {}
-    case = conf.get("fixture_case", "valid_vi")
-    top_n = conf.get("top_n", 3)
-    fail_once = conf.get("test_fail_after_documents_once", False)
-    if case not in ("valid_vi", "empty", "script_only"):
-        raise ValueError("fixture_case must be valid_vi, empty or script_only")
-    if type(top_n) is not int or not 1 <= top_n <= 100:
-        raise ValueError("top_n must be an integer in 1..100")
-    if type(fail_once) is not bool:
-        raise ValueError("test_fail_after_documents_once must be boolean")
+    from src.crawler.config import validate_input
+    config = validate_input(context['dag_run'].conf or {})
+    case, top_n, fail_once = config['fixture_case'], config['top_n'], config['fail_once']
     master_state()
     run_id = run_uuid(dag_id, airflow_run_id)
-    url = "https://fixture.invalid/" + case.replace("_", "-")
-    page_id = hashlib.sha256(url.encode()).hexdigest()
-    raw = (ROOT / f"fixtures/html/{case}.html").read_bytes()
-    with closing(connect("CRAWLER")) as conn, conn, conn.cursor() as cur:
-        cur.execute("""INSERT INTO bronze.web_pages VALUES
-            (%s::uuid,%s,%s,%s,now(),200,'text/html; charset=utf-8',%s,%s,'utf-8',NULL)
-            ON CONFLICT (run_id,page_id) DO NOTHING""",
-            (run_id, page_id, url, url, hashlib.sha256(raw).hexdigest(), raw.decode("utf-8")))
-        cur.execute("SELECT page_id,content_hash FROM bronze.web_pages WHERE run_id=%s::uuid", (run_id,))
-        if cur.fetchall() != [(page_id, hashlib.sha256(raw).hexdigest())]:
-            raise RuntimeError("Existing Bronze snapshot differs from requested fixture")
+    cases = {'mixed': ['valid_vi', 'empty', 'script_only', 'http_error', 'missing_body'],
+             'all_invalid': ['empty', 'script_only', 'http_error', 'missing_body', 'no_tokens']}.get(case, [case])
     with locked_run(run_id) as conn, conn, conn.cursor() as cur:
         cur.execute("""INSERT INTO metadata.pipeline_runs
-            (run_id,dag_id,airflow_run_id,transform_version,rules_version)
-            VALUES (%s::uuid,%s,%s,%s,%s) ON CONFLICT (run_id) DO NOTHING""",
-            (run_id, dag_id, airflow_run_id, TRANSFORM_VERSION, RULES_VERSION))
-        cur.execute("SELECT transform_version,rules_version FROM metadata.pipeline_runs WHERE run_id=%s::uuid", (run_id,))
-        check_versions(cur.fetchone())
+            (run_id,dag_id,airflow_run_id,transform_version,rules_version,input_config)
+            VALUES (%s::uuid,%s,%s,%s,%s,%s) ON CONFLICT (run_id) DO NOTHING""",
+            (run_id, dag_id, airflow_run_id, TRANSFORM_VERSION, RULES_VERSION, Json(config)))
+        cur.execute("SELECT transform_version,rules_version,publish_status,input_config FROM metadata.pipeline_runs WHERE run_id=%s::uuid", (run_id,))
+        row = cur.fetchone()
+        check_versions(row)
+        if row[3] is not None and row[3] != config:
+            raise RuntimeError('Snapshot configuration changed; create a new DagRun')
+        with closing(connect('CRAWLER')) as bronze_conn, bronze_conn, bronze_conn.cursor() as writer:
+            expected = []
+            for item in cases:
+                url = 'https://fixture.invalid/' + item.replace('_', '-')
+                page = hashlib.sha256(url.encode()).hexdigest()
+                filename = 'valid_vi' if item in ('http_error', 'unsupported_type') else item
+                raw = (ROOT / f'fixtures/html/{filename}.html').read_bytes()
+                digest = hashlib.sha256(raw).hexdigest()
+                status, error = (404, 'http_404') if item == 'http_error' else (200, None)
+                content_type = 'application/pdf' if item == 'unsupported_type' else 'text/html; charset=utf-8'
+                writer.execute('''INSERT INTO bronze.web_pages VALUES
+                    (%s::uuid,%s,%s,%s,now(),%s,%s,%s,%s,'utf-8',%s)
+                    ON CONFLICT (run_id,page_id) DO NOTHING''',
+                    (run_id, page, url, url, status, content_type, digest, raw.decode('utf-8'), error))
+                expected.append((page, digest))
+            writer.execute('SELECT page_id,content_hash FROM bronze.web_pages WHERE run_id=%s::uuid ORDER BY page_id', (run_id,))
+            if writer.fetchall() != sorted(expected):
+                raise RuntimeError('Existing Bronze snapshot differs from requested fixture')
     print(f"FIXTURE_PREPARED run_id={run_id} case={case}; handwritten, no web crawl")
-    return {"run_id": run_id, "top_n": top_n, "fixture_case": case, "fail_once": fail_once}
+    return {"run_id": run_id, "top_n": top_n, "fixture_case": case, "fail_once": fail_once,
+            'fail_always': config['fail_always']}
 
 
-def validate_staging(cur, run_id, attempt_id, input_count, total_tokens):
+def validate_staging(cur, run_id, attempt_id, input_count, total_tokens, rejected_count=0):
+    valid_count = input_count - rejected_count
+    cur.execute('SELECT count(*) FROM bronze.web_pages WHERE run_id=%s::uuid', (run_id,))
+    if cur.fetchone()[0] != input_count:
+        raise RuntimeError('Staging invariant failed: Bronze input count changed')
     cur.execute("""SELECT d.page_id,d.token_count,coalesce(sum(w.count),0)
         FROM staging.documents d LEFT JOIN staging.word_counts w
         USING (run_id,attempt_id,page_id)
         WHERE d.run_id=%s AND d.attempt_id=%s
         GROUP BY d.page_id,d.token_count""", (run_id, attempt_id))
     rows = cur.fetchall()
-    if not rows or len(rows) != input_count or any(tokens <= 0 or tokens != counts for _, tokens, counts in rows):
+    if not rows or len(rows) != valid_count or any(tokens <= 0 or tokens != counts for _, tokens, counts in rows):
         raise RuntimeError("Staging invariant failed: input/doc count or per-page token sum")
     if sum(row[1] for row in rows) != total_tokens:
         raise RuntimeError("Staging total_tokens mismatch")
@@ -85,8 +98,23 @@ def validate_staging(cur, run_id, attempt_id, input_count, total_tokens):
         WHERE d.run_id=%s AND d.attempt_id=%s AND d.content_hash=b.content_hash
         AND d.source_url=coalesce(b.final_url,b.requested_url) AND d.transform_version=%s""",
         (run_id, attempt_id, TRANSFORM_VERSION))
-    if cur.fetchone()[0] != input_count:
+    if cur.fetchone()[0] != valid_count:
         raise RuntimeError("Staging does not match Bronze source/version")
+    cur.execute("SELECT rules_version FROM metadata.pipeline_runs WHERE run_id=%s::uuid", (run_id,))
+    if cur.fetchone()[0] == RULES_VERSION:
+        cur.execute('''SELECT count(*),count(*) FILTER (WHERE q.attempt_id=%s),
+            count(*) FILTER (WHERE EXISTS (SELECT 1 FROM staging.documents d
+                WHERE d.run_id=%s AND d.attempt_id=%s AND d.page_id=q.page_id))
+            FROM quarantine.rejected_pages q WHERE q.run_id=%s::uuid''',
+            (attempt_id, run_id, attempt_id, run_id))
+        if cur.fetchone() != (rejected_count, rejected_count, 0):
+            raise RuntimeError('Quarantine count/attempt or accepted/rejected overlap')
+        cur.execute('''SELECT count(*) FROM bronze.web_pages b WHERE b.run_id=%s::uuid
+            AND (EXISTS (SELECT 1 FROM staging.documents d WHERE d.run_id=%s AND d.attempt_id=%s AND d.page_id=b.page_id)
+                 OR EXISTS (SELECT 1 FROM quarantine.rejected_pages q WHERE q.run_id=b.run_id AND q.page_id=b.page_id))''',
+            (run_id, run_id, attempt_id))
+        if cur.fetchone()[0] != input_count:
+            raise RuntimeError('Input must equal valid plus rejected')
 
 
 def publish_results(run_id, *, _after_documents=None):
@@ -94,11 +122,11 @@ def publish_results(run_id, *, _after_documents=None):
     run_id = str(UUID(run_id))
     with locked_run(run_id) as conn, conn, conn.cursor() as cur:
         cur.execute("""SELECT transform_version,rules_version,publish_status,active_attempt,
-            staging_complete,input_count,total_tokens FROM metadata.pipeline_runs
+            staging_complete,input_count,total_tokens,rejected_count,valid_count,quality_status,rules_sha256 FROM metadata.pipeline_runs
             WHERE run_id=%s::uuid FOR UPDATE""", (run_id,))
         row = cur.fetchone()
         check_versions(row)
-        _, _, status, attempt, complete, input_count, total_tokens = row
+        _, _, status, attempt, complete, input_count, total_tokens, rejected, valid, quality_status, rules_hash = row
         if status == PUBLISHED:
             if not complete or not attempt:
                 raise RuntimeError("Inconsistent published run")
@@ -106,7 +134,18 @@ def publish_results(run_id, *, _after_documents=None):
             return {"run_id": run_id, "status": PUBLISHED, "noop": True}
         if status != "staged" or not complete or not attempt:
             raise RuntimeError("Cannot publish incomplete or failed Spark staging")
-        validate_staging(cur, run_id, attempt, input_count, total_tokens)
+        if row[1] == RULES_VERSION:
+            if quality_status not in ('valid', 'partial') or valid != input_count - rejected or valid <= 0:
+                raise RuntimeError('Quality gate is incomplete or failed')
+            if rules_hash != load_rules()[1]:
+                raise RuntimeError('Rules changed; create a new DagRun')
+            cur.execute('''SELECT check_name,status FROM quality.check_results WHERE run_id=%s::uuid
+                AND attempt_id=%s AND scope_key='@run' ''', (run_id, attempt))
+            checks = dict(cur.fetchall())
+            required = {'unique_keys', 'input_balance', 'staging_invariants', 'has_valid_pages'}
+            if not required <= checks.keys() or any(checks[n] != 'pass' for n in required):
+                raise RuntimeError('Quality run checks failed or missing')
+        validate_staging(cur, run_id, attempt, input_count, total_tokens, rejected or 0)
         # FK order matters. Deletes are scoped to this snapshot only.
         cur.execute("DELETE FROM demo.word_counts WHERE run_id=%s::uuid", (run_id,))
         cur.execute("DELETE FROM silver.documents WHERE run_id=%s::uuid", (run_id,))
@@ -142,19 +181,20 @@ def output_snapshot(run_id, top_n=3):
         cur.execute("""SELECT page_id,word,count FROM demo.published_word_counts
             WHERE run_id=%s::uuid ORDER BY page_id,count DESC,word COLLATE "C" ASC""", (run_id,))
         counts = [{"page_id": page, "word": word, "count": count} for page, word, count in cur.fetchall()]
+        diagnostics = quality_snapshot(cur, run_id)
     # Display limit only. The complete counts above remain available for checks.
     displayed = []
     for page in dict.fromkeys(row["page_id"] for row in counts):
         displayed.extend([row for row in counts if row["page_id"] == page][:top_n])
     return {"metadata": metadata, "documents": documents, "word_counts": counts,
-            "top_n": displayed}
+            "top_n": displayed, **diagnostics}
 
 
 def verify_output(run_id, top_n=3):
     snapshot = output_snapshot(run_id, int(top_n))
     expected = json.loads((ROOT / "fixtures/expected.json").read_text(encoding="utf-8"))["valid_vi"]
     docs, counts, meta = snapshot["documents"], snapshot["word_counts"], snapshot["metadata"]
-    if meta["publish_status"] != PUBLISHED or len(docs) != 1 or meta["input_count"] != 1:
+    if meta["publish_status"] != PUBLISHED or len(docs) != 1 or meta["input_count"] != 1 + len(snapshot['quarantine']):
         raise RuntimeError("Expected one published fixture document")
     doc = docs[0]
     for field in ("title", "clean_text", "token_count"):

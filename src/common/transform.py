@@ -1,14 +1,14 @@
 """Transform 1.0.0: body text; Unicode letters/decimal digits; no stopwords.
 
 These pure functions run inside Spark Python UDFs on the executor.
-Day 4 will read versioned quality policy from YAML; day 2 uses fixed rules.
+Extraction/tokenization settings are validated by the versioned rules reader.
 """
 import unicodedata
 
 from bs4 import BeautifulSoup
 
 TRANSFORM_VERSION = "1.0.0"
-RULES_VERSION = "1.0.0"
+RULES_VERSION = "1.1.0"
 
 
 def normalize_space(text):

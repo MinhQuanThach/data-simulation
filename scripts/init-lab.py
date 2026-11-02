@@ -32,6 +32,9 @@ with connect("LAB_ADMIN") as conn, conn.cursor() as cur:
     cur.execute(sql.SQL("GRANT SELECT, INSERT, DELETE ON staging.documents, staging.word_counts, silver.documents, demo.word_counts TO {}").format(spark))
     cur.execute(sql.SQL("GRANT SELECT, INSERT, UPDATE ON metadata.pipeline_runs TO {}").format(spark))
     cur.execute(sql.SQL("GRANT SELECT ON demo.published_word_counts TO {}").format(spark))
+    cur.execute(sql.SQL("GRANT USAGE ON SCHEMA quality, quarantine TO {}").format(spark))
+    cur.execute(sql.SQL("GRANT SELECT, INSERT, UPDATE ON quality.check_results TO {}").format(spark))
+    cur.execute(sql.SQL("GRANT SELECT, INSERT, DELETE ON quarantine.rejected_pages TO {}").format(spark))
     raw = FIXTURE_PATH.read_bytes()
     cur.execute("""INSERT INTO bronze.web_pages VALUES
         (%s::uuid,%s,%s,%s,now(),200,'text/html; charset=utf-8',%s,%s,'utf-8',NULL)

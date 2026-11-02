@@ -1,5 +1,8 @@
 # Vận hành ngày 3: HTML web thật → Silver
 
+Đây là mốc ngày 3. Từ ngày 4 đã có quality/quarantine và publish partial theo
+[day4.md](day4.md); các đoạn mô tả fail toàn run bên dưới là hành vi lịch sử.
+
 DAG `bronze_to_silver` nhận URL bằng cấu hình, dùng cùng Spark job/publisher của
 ngày 2. Luồng hiện tại gồm năm task:
 `validate_config → crawl_to_bronze → spark_clean_validate_count → publish_results → verify_output`.

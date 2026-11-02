@@ -1,5 +1,11 @@
 # Hợp đồng dữ liệu
 
+Hiện tại ngày 4: quality.check_results và quarantine.rejected_pages đã được tạo
+bằng migration004; metadata có rules_config/rules_sha256, quality_status,
+valid_count/rejected_count. `partial` là quality_status, còn publish_status của
+mọi snapshot đã commit vẫn là `published`. Chi tiết schema tại [day4.md](day4.md).
+Các đoạn “dự kiến” về catalog/lineage/telemetry dưới đây vẫn chờ ngày 5–6.
+
 Thiết kế nghiệp vụ version 1.0.0; ngày 2 đã thêm staging/Silver/demo và control metadata.
 Timestamp dùng PostgreSQL timestamptz, lưu UTC; UI/tài liệu người dùng theo Asia/Saigon.
 
@@ -90,9 +96,9 @@ toàn bộ kết quả ngoài Spark rồi khởi động Spark tượng trưng.
 
 ## Quality, retry và publish
 
-Phần dưới là đích hoàn thiện cả tuần. Ngày 2–3 vẫn fail toàn run nếu có trang lỗi,
-không publish; chưa persisted quality/quarantine hoặc partial. Transaction publish,
-cleanup attempt, token invariants và published no-op đã hiện thực ngày 2.
+Ngày 4 thêm rules reader, persisted quality/quarantine và partial/all-invalid;
+schema/lệnh kiểm tra tại [day4.md](day4.md). Rules1.1.0, transform1.0.0.
+Kết quả chạy thật xem STATUS. Catalog/lineage và telemetry còn thuộc ngày 5–6.
 
 - Trang lỗi đã biết → quarantine theo page với reason; valid > 0 và rejected > 0
   → publish valid và status partial. Valid = 0 → quality evidence/quarantine giữ lại,
@@ -110,7 +116,8 @@ cleanup attempt, token invariants và published no-op đã hiện thực ngày 2
 - Retry publish run đã công bố cùng versions/attempt hợp lệ là no-op. Run đã publish
   không tự recrawl/transform lại khi clear task; muốn dữ liệu mới tạo DagRun mới.
   Không mặc định JDBC append idempotent; không truncate cả lịch sử.
-- Demo query join metadata publish_status trong (published,partial), không đọc staging.
+- Demo query join metadata publish_status='published'; partial ở quality_status,
+  không đọc staging.
   Top-N chỉ giới hạn hiển thị: count DESC, word ASC theo PostgreSQL COLLATE "C"
   để có thứ tự byte UTF-8 ổn định với locale khác nhau.
 - Callback/telemetry không được che lỗi upstream hoặc biến final DAG state thành success.

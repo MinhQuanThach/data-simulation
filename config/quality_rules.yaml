@@ -1,5 +1,5 @@
-# Design contract; the Spark rules reader is implemented on day 4.
-rules_version: "1.0.0"
+# Executed by src/common/quality.py. Unsupported policies fail validation.
+rules_version: "1.1.0"
 transform_version: "1.0.0"
 extraction:
   parser: html.parser
@@ -32,6 +32,6 @@ publish:
   all_invalid: fail_without_publish
   system_failure: fail_without_publish
 display:
-  default_top_n: 10
+  default_top_n: 3
   max_top_n: 100
   order: [count_desc, word_asc]

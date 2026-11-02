@@ -12,6 +12,8 @@ from uuid import uuid4
 from src.common.pipeline import ROOT, output_snapshot, publish_results
 from src.common.smoke import connect
 from src.common.transform import extract_html, tokenize, RULES_VERSION, TRANSFORM_VERSION
+from src.common.quality import load_rules, record_check
+from psycopg2.extras import Json
 
 
 class TransformTests(unittest.TestCase):
@@ -69,6 +71,42 @@ def transaction_checks(source_run):
         cur.execute("""INSERT INTO staging.word_counts SELECT %s,%s,page_id,word,count
             FROM demo.word_counts WHERE run_id=%s::uuid""", (run_id, attempt, source_run))
         cur.execute("UPDATE metadata.pipeline_runs SET staging_complete=true,publish_status='staged' WHERE run_id=%s::uuid", (run_id,))
+        rules, digest = load_rules()
+        cur.execute('''UPDATE metadata.pipeline_runs SET rules_config=%s,rules_sha256=%s,
+            valid_count=1,rejected_count=0,quality_status='valid' WHERE run_id=%s::uuid''', (Json(rules), digest, run_id))
+        for check in ('unique_keys', 'input_balance', 'staging_invariants', 'has_valid_pages'):
+            record_check(cur, run_id, attempt, '@run', check, True, 'transaction fixture', 'valid')
+
+    # Mutate only this fresh test snapshot. Even a stale passing check cannot
+    # bypass the publisher's independent SQL invariant validation.
+    with closing(connect()) as conn, conn, conn.cursor() as cur:
+        cur.execute('UPDATE metadata.pipeline_runs SET input_count=2,valid_count=2 WHERE run_id=%s::uuid', (run_id,))
+    try:
+        publish_results(run_id)
+        raise AssertionError('Incorrect Bronze input count published')
+    except RuntimeError as error:
+        assert 'Bronze input count changed' in str(error)
+    with closing(connect()) as conn, conn, conn.cursor() as cur:
+        cur.execute('UPDATE metadata.pipeline_runs SET input_count=1,valid_count=1 WHERE run_id=%s::uuid', (run_id,))
+    with closing(connect()) as conn, conn, conn.cursor() as cur:
+        cur.execute('''WITH removed AS (DELETE FROM staging.word_counts WHERE run_id=%s RETURNING *)
+            INSERT INTO staging.word_counts SELECT run_id,attempt_id,page_id,word,count+1 FROM removed''', (run_id,))
+    try:
+        publish_results(run_id)
+        raise AssertionError('Corrupted counts published')
+    except RuntimeError as error:
+        assert 'invariant' in str(error)
+    with closing(connect()) as conn, conn, conn.cursor() as cur:
+        cur.execute('''WITH removed AS (DELETE FROM staging.word_counts WHERE run_id=%s RETURNING *)
+            INSERT INTO staging.word_counts SELECT run_id,attempt_id,page_id,word,count-1 FROM removed''', (run_id,))
+        cur.execute('UPDATE metadata.pipeline_runs SET rules_sha256=%s WHERE run_id=%s::uuid', ('0' * 64, run_id))
+    try:
+        publish_results(run_id)
+        raise AssertionError('Changed rules published')
+    except RuntimeError as error:
+        assert 'Rules changed' in str(error)
+    with closing(connect()) as conn, conn, conn.cursor() as cur:
+        cur.execute('UPDATE metadata.pipeline_runs SET rules_sha256=%s WHERE run_id=%s::uuid', (digest, run_id))
 
     def fail_after_documents():
         # A concurrent reader must not see uncommitted Silver or public counts.
@@ -96,7 +134,8 @@ def transaction_checks(source_run):
     assert before["metadata"]["total_tokens"] == 12 and len(before["word_counts"]) == 8
     print(json.dumps({"transaction_test_run_id": run_id, "incomplete_publish_blocked": True,
                       "uncommitted_data_invisible": True, "rollback_both_tables": True,
-                      "publish_retry_noop": True}))
+                      "publish_retry_noop": True, 'corrupted_counts_blocked': True, 'rules_drift_blocked': True,
+                      'incorrect_bronze_input_count_blocked': True}))
 
 
 def assert_blocked(run_id):
