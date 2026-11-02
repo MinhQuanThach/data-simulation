@@ -37,11 +37,11 @@ def prepare_run(dag_id, airflow_run_id):
     master_state()
     run_id = run_uuid(dag_id, airflow_run_id)
     with connect("CRAWLER") as conn, conn.cursor() as cur:
+        raw = FIXTURE_PATH.read_bytes()
         cur.execute("""INSERT INTO bronze.web_pages
-            SELECT %s::uuid, page_id, requested_url, final_url, fetched_at,
-                   http_status, content_type, content_hash, raw_html, response_encoding, fetch_error
-            FROM bronze.web_pages WHERE run_id = %s::uuid
-            ON CONFLICT (run_id,page_id) DO NOTHING""", (run_id, FIXTURE_RUN))
+            VALUES (%s::uuid,%s,%s,%s,now(),200,'text/html; charset=utf-8',%s,%s,'utf-8',NULL)
+            ON CONFLICT (run_id,page_id) DO NOTHING""",
+            (run_id, FIXTURE_PAGE, FIXTURE_URL, FIXTURE_URL, hashlib.sha256(raw).hexdigest(), raw.decode('utf-8')))
         if cur.rowcount not in (0, 1):
             raise RuntimeError("Unexpected fixture input count")
         cur.execute("SELECT count(*) FROM bronze.web_pages WHERE run_id=%s::uuid", (run_id,))

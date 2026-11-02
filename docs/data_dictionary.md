@@ -1,10 +1,17 @@
 # Hợp đồng dữ liệu
 
+Ngày 5 bổ sung metadata.datasets/catalog_versions, run catalog_sha256 và
+metadata.lineage PK(run,attempt,input_dataset,output_dataset), app/job, schema,
+transform/rules versions/hashes, output_count và publish_status. Observer đọc
+metadata.run_summary, datasets/lineage và demo view; schema/quyền chi tiết tại
+[day5.md](day5.md), trạng thái nghiệm thu tại STATUS. Các đoạn dự kiến bên dưới
+giữ bối cảnh thiết kế lịch sử; telemetry vẫn thuộc ngày 6.
+
 Hiện tại ngày 4: quality.check_results và quarantine.rejected_pages đã được tạo
 bằng migration004; metadata có rules_config/rules_sha256, quality_status,
 valid_count/rejected_count. `partial` là quality_status, còn publish_status của
 mọi snapshot đã commit vẫn là `published`. Chi tiết schema tại [day4.md](day4.md).
-Các đoạn “dự kiến” về catalog/lineage/telemetry dưới đây vẫn chờ ngày 5–6.
+Catalog/lineage hiện có tại day5.md; telemetry vẫn chờ ngày 6.
 
 Thiết kế nghiệp vụ version 1.0.0; ngày 2 đã thêm staging/Silver/demo và control metadata.
 Timestamp dùng PostgreSQL timestamptz, lưu UTC; UI/tài liệu người dùng theo Asia/Saigon.
@@ -98,7 +105,7 @@ toàn bộ kết quả ngoài Spark rồi khởi động Spark tượng trưng.
 
 Ngày 4 thêm rules reader, persisted quality/quarantine và partial/all-invalid;
 schema/lệnh kiểm tra tại [day4.md](day4.md). Rules1.1.0, transform1.0.0.
-Kết quả chạy thật xem STATUS. Catalog/lineage và telemetry còn thuộc ngày 5–6.
+Kết quả chạy thật xem STATUS. Catalog/lineage xem day5.md; telemetry thuộc ngày 6.
 
 - Trang lỗi đã biết → quarantine theo page với reason; valid > 0 và rejected > 0
   → publish valid và status partial. Valid = 0 → quality evidence/quarantine giữ lại,

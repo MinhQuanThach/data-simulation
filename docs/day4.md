@@ -1,5 +1,8 @@
 # Ngày 4: Data Quality và quarantine
 
+Tài liệu này mô tả mốc ngày 4. Từ ngày 5 publisher dùng identity riêng và có
+catalog/lineage; quyền và vận hành hiện tại tại [day5.md](day5.md), kết quả tại STATUS.
+
 Web/fixture dùng chung DAG năm task và Spark standalone. Rules `1.1.0`, transform
 `1.0.0`; không thêm service/dependency hoặc build lại image. Kết quả chạy thật tại
 [STATUS](../STATUS.md). Quyền publisher/observer, catalog/lineage đầy đủ thuộc ngày 5;

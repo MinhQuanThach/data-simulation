@@ -3,7 +3,12 @@
 Lab local để học tương tác của 7 block Data Engineering bằng HTML thật.
 Đặc tả gốc: [bronze_silver_7day_project_prompt.md](bronze_silver_7day_project_prompt.md).
 
-**Trạng thái 2026-11-01: ngày 1–4 đã hoàn thành, nghiệm thu PASS.**
+**Ngày 1–5 đã hoàn thành, PASS ngày 5 lúc 11:03:38 ngày 02/11/2026 Asia/Saigon**:
+31 unit tests, 57 phép thử allow/deny, catalog/lineage, atomic publish và retry/replay fixture/web.
+Xem [vận hành ngày 5](docs/day5.md) và [STATUS](STATUS.md). Chạy `python scripts/day5.py accept` trên runtime
+đã có; `python scripts/day5.py inspect --run-id <UUID>` query lineage bằng observer.
+
+Mốc lịch sử 2026-11-01: ngày 1–4 PASS. Ngày6–7 chưa triển khai.
 Ngày4 accept PASS23:37:23: 26unit tests, quality/quarantine/partial, all-invalid/system
 failure, retry/replay/atomic publish và web partial thật; bằng chứng tại STATUS.
 Rules reader, quality/quarantine và partial/all-invalid: [vận hành ngày 4](docs/day4.md).
@@ -92,10 +97,10 @@ DAG hiện có năm task validate/crawl/Spark/publish/verify. Bỏ `urls` để 
 fixture. `top_n` giới hạn từng trang, toàn bộ counts giữ lại. Mỗi URL duy nhất có
 Bronze row kể cả lỗi; ngày 3 vẫn fail toàn run khi có trang lỗi, không publish.
 Hành vi trên là mốc ngày 3; ngày 4 thay bằng quarantine/publish phần hợp lệ.
-Catalog/lineage và Grafana còn chờ ngày 5–6.
+Catalog/lineage đã có code ngày 5; Grafana còn chờ ngày 6.
 Worker dùng chung image Airflow để đồng nhất Python 3.11; đây là giản lược cho lab.
 Hai PostgreSQL giữ volume riêng; admin chỉ init, task dùng role crawler/job riêng.
-Ngày 2 Spark và publisher tạm dùng chung role job; tách publisher và test deny ở ngày 5.
+Ngày 5 publisher có identity riêng; allow/deny tests và phạm vi quyền tại docs/day5.md.
 Không xóa volume để cold start; ngày 7 dùng project/volume thử nghiệm riêng.
 
 Repository public: [MinhQuanThach/data-simulation](https://github.com/MinhQuanThach/data-simulation),

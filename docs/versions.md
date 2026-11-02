@@ -1,5 +1,9 @@
 # Phiên bản đã khóa và kiểm chứng ngày 1
 
+Ngày 5 giữ toàn bộ pins/runtime/dependencies; catalog reader dùng PyYAML đã có.
+Catalog schema1.0.0, transform1.0.0/rules1.1.0; không tải dependency khi task chạy.
+Inventory/nghiệm thu mới xem STATUS và docs/evidence/day5/.
+
 Ngày 4 giữ nguyên image/dependency pins; PyYAML6.0.3 đã có trong direct requirements
 và image, không cài thêm khi task chạy. Rules đổi sang1.1.0, transform giữ1.0.0.
 Inventory/image IDs kiểm tra lại tại docs/evidence/day4/runtime.json và images.json;

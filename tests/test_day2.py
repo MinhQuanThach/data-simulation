@@ -13,6 +13,7 @@ from src.common.pipeline import ROOT, output_snapshot, publish_results
 from src.common.smoke import connect
 from src.common.transform import extract_html, tokenize, RULES_VERSION, TRANSFORM_VERSION
 from src.common.quality import load_rules, record_check
+from src.common.catalog import pin_catalog, record_lineage
 from psycopg2.extras import Json
 
 
@@ -74,6 +75,15 @@ def transaction_checks(source_run):
         rules, digest = load_rules()
         cur.execute('''UPDATE metadata.pipeline_runs SET rules_config=%s,rules_sha256=%s,
             valid_count=1,rejected_count=0,quality_status='valid' WHERE run_id=%s::uuid''', (Json(rules), digest, run_id))
+        # This retained transaction fixture copies existing Spark output; it does
+        # not claim a new Spark execution. Keep the real originating app ID and
+        # label the copy operation explicitly in its test-only lineage.
+        pin_catalog(cur, run_id)
+        cur.execute('''UPDATE metadata.pipeline_runs SET spark_application_id=(SELECT spark_application_id
+            FROM metadata.pipeline_runs WHERE run_id=%s::uuid) WHERE run_id=%s::uuid''', (source_run, run_id))
+        record_lineage(cur, run_id, attempt, 'staged', {'silver.documents': 1, 'demo.word_counts': 8,
+                                                      'quarantine.rejected_pages': 0})
+        cur.execute("UPDATE metadata.lineage SET job_name='test_day2.transaction_snapshot_copy' WHERE run_id=%s::uuid", (run_id,))
         for check in ('unique_keys', 'input_balance', 'staging_invariants', 'has_valid_pages'):
             record_check(cur, run_id, attempt, '@run', check, True, 'transaction fixture', 'valid')
 
@@ -115,6 +125,8 @@ def transaction_checks(source_run):
             assert cur.fetchone()[0] == 0, "Uncommitted Silver became visible"
             cur.execute("SELECT count(*) FROM demo.published_word_counts WHERE run_id=%s::uuid", (run_id,))
             assert cur.fetchone()[0] == 0
+            cur.execute("SELECT count(*) FROM metadata.lineage WHERE run_id=%s::uuid AND publish_status='published'", (run_id,))
+            assert cur.fetchone()[0] == 0, 'Uncommitted lineage became visible'
         raise RuntimeError("injected transaction rollback")
 
     try:
@@ -127,6 +139,9 @@ def transaction_checks(source_run):
             cur.execute(f"SELECT count(*) FROM {table} WHERE run_id=%s::uuid", (run_id,))
             assert cur.fetchone()[0] == 0, "Transaction leaked a partial result"
     assert output_snapshot(run_id)["metadata"]["publish_status"] == "staged"
+    with closing(connect()) as conn, conn, conn.cursor() as cur:
+        cur.execute("SELECT count(*) FROM metadata.lineage WHERE run_id=%s::uuid AND publish_status='staged'", (run_id,))
+        assert cur.fetchone()[0] == 3, 'Lineage did not roll back with public tables'
     assert publish_results(run_id)["noop"] is False
     before = output_snapshot(run_id)
     assert publish_results(run_id)["noop"] is True

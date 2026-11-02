@@ -58,9 +58,11 @@ def check_snapshot(run, snapshot):
             assert meta['valid_count'] == 0 and len(rejected) == meta['input_count']
 
 
-def trigger(case='valid_vi', fail_once=False, fail_always=False, urls=None):
+def trigger(case='valid_vi', fail_once=False, fail_always=False, urls=None, prefix='day4'):
     timestamp = datetime.now(timezone.utc)
-    airflow_id = 'day4_' + timestamp.strftime('%Y%m%dT%H%M%S%fZ')
+    if prefix not in ('day4', 'day5'):
+        raise ValueError('Unsupported acceptance prefix')
+    airflow_id = prefix + '_' + timestamp.strftime('%Y%m%dT%H%M%S%fZ')
     run_id = str(uuid5(NAMESPACE_URL, json.dumps([DAG, airflow_id], separators=(',', ':'))))
     conf = {'top_n': 3, 'test_fail_after_documents_once': fail_once,
             'test_fail_after_documents_always': fail_always}

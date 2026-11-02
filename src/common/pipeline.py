@@ -10,20 +10,21 @@ from psycopg2.extras import Json
 from src.common.smoke import connect, master_state, run_uuid
 from src.common.transform import RULES_VERSION, TRANSFORM_VERSION
 from src.common.quality import load_rules, quality_snapshot
+from src.common.catalog import pin_catalog, publish_lineage
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLISHED = "published"
 
 
 @contextmanager
-def locked_run(run_id):
+def locked_run(run_id, role='SPARK'):
     """Same session lock for Spark attempts and publisher, held across commits.
 
     Closing the session releases the lock even if an attempt raises. JDBC uses
     separate sessions, so only control operations take this advisory lock.
     """
     run_id = str(UUID(run_id))
-    with closing(connect()) as conn:
+    with closing(connect(role)) as conn:
         with conn.cursor() as cur:
             cur.execute("SET lock_timeout = '30s'")
             cur.execute("SELECT pg_advisory_lock(hashtextextended(%s, 0))", (run_id,))
@@ -53,6 +54,7 @@ def prepare_fixture(dag_id, airflow_run_id, **context):
         cur.execute("SELECT transform_version,rules_version,publish_status,input_config FROM metadata.pipeline_runs WHERE run_id=%s::uuid", (run_id,))
         row = cur.fetchone()
         check_versions(row)
+        pin_catalog(cur, run_id)
         if row[3] is not None and row[3] != config:
             raise RuntimeError('Snapshot configuration changed; create a new DagRun')
         with closing(connect('CRAWLER')) as bronze_conn, bronze_conn, bronze_conn.cursor() as writer:
@@ -120,7 +122,7 @@ def validate_staging(cur, run_id, attempt_id, input_count, total_tokens, rejecte
 def publish_results(run_id, *, _after_documents=None):
     """All public tables + published flag commit together. Hook is for rollback tests."""
     run_id = str(UUID(run_id))
-    with locked_run(run_id) as conn, conn, conn.cursor() as cur:
+    with locked_run(run_id, 'PUBLISHER') as conn, conn, conn.cursor() as cur:
         cur.execute("""SELECT transform_version,rules_version,publish_status,active_attempt,
             staging_complete,input_count,total_tokens,rejected_count,valid_count,quality_status,rules_sha256 FROM metadata.pipeline_runs
             WHERE run_id=%s::uuid FOR UPDATE""", (run_id,))
@@ -146,6 +148,7 @@ def publish_results(run_id, *, _after_documents=None):
             if not required <= checks.keys() or any(checks[n] != 'pass' for n in required):
                 raise RuntimeError('Quality run checks failed or missing')
         validate_staging(cur, run_id, attempt, input_count, total_tokens, rejected or 0)
+        publish_lineage(cur, run_id, attempt)
         # FK order matters. Deletes are scoped to this snapshot only.
         cur.execute("DELETE FROM demo.word_counts WHERE run_id=%s::uuid", (run_id,))
         cur.execute("DELETE FROM silver.documents WHERE run_id=%s::uuid", (run_id,))

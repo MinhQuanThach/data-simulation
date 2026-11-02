@@ -1,6 +1,91 @@
 # Trạng thái dự án
 
-## Ngày 4 đã hoàn thành — nghiệm thu PASS
+## Ngày 5 đã hoàn thành — nghiệm thu PASS
+
+**Ngày 1–5 PASS.** `python scripts/day5.py accept` kết thúc exit0 lúc **11:03:38
+ngày 2026-11-02 Asia/Saigon**, [latest.json](docs/evidence/day5/latest.json),
+[tóm tắt runs](docs/evidence/day5/handoff-summary.json). Source SHA256 không đổi
+trong nghiệm thu và được đối chiếu lại sau đó. Giữ bằng chứng ngày1–4.
+
+Đã đọc toàn bộ đặc tả/Markdown và cấu trúc/code repo; không có AGENTS.md áp dụng.
+Tạo migration005_day5.sql, catalog.py, day5.py, test_day5.py, day5_lineage.sql và
+[day5.md](docs/day5.md); sửa init grants/Compose/publisher/job/crawler và tests
+transaction. Không thêm dependency/service hoặc build image. Admin chỉ init/seed;
+task crawler/job/publisher tách kết nối, observer chỉ đọc phần được cấp.
+
+| Kiểm tra | Kết quả thực tế |
+|---|---|
+| Migration/catalog | Chạy lại hai lần trên volume cũ; 4 datasets/schema1.0.0/owner/description, canonical catalog hash; drift cùng version bị chặn |
+| Unit Linux | 31 tests PASS: fixture5, crawler/config16, quality5, catalog5 |
+| Quyền thật | 57 probes:13allow/44deny đúng42501; kết nối TCP/password/session_user từng role; không superuser/membership/DDL/temp/SET ROLE admin |
+| Crawler/job | Crawler chỉ ghi Bronze và đọc để replay; job đọc Bronze/ghi staging/quarantine/check/control/lineage, không ghi public hoặc giả published |
+| Publisher/observer | Publisher riêng ghi Silver/demo và cột publish; observer chỉ metadata cần thiết/demo view; bị chặn raw/staging/DML/DDL |
+| Lineage | Bronze → job/app-ID thật → Silver/demo/quarantine theo run/attempt, schema/owner, transform/rules versions/hashes/catalog; failed attempt giữ history |
+| Fixture/partial | Normal12tokens/8words; partial5=valid1+rejected4, oracle đúng; retry thật/up_for_retry/publicrows0/publisher blocked rồi attempt2success |
+| Replay | Exact-run fixture và web replay đều đủ5tasksuccess; Bronze/output/lineage/checks/timestamps/app IDs không đổi |
+| Lỗi | All-invalid5=0+5; system failure2attempts; DAGfailed/downstreamupstream_failed/publicrows0, lineage failed, không báo lỗi thành success |
+| Atomic publish | Incomplete/token/Bronze count/rules drift bị chặn; reader không thấy uncommitted; fault rollback Silver/demo/runflag/lineage, retry rồi no-op |
+| Web thật | example.comHTTP200 + URL404, input2=valid1+rejected1,25tokens, partial/published; bytes/HTML thật được lưu riêng |
+| Runtime | 7/7service healthy; driver/worker inventory/pip/JDBC khớp, imageID giữ c58044...fdc; admin/observer vắng scheduler, credentials DB vắng worker environment |
+| Smoke regression | DAG smoke_bronze đủ3task success với crawler/job roles; standalone executor log và JDBC fixture output PASS |
+| Kiểm tra cuối | Preparation, compileall, Compose config, diff check PASS; source hashes khớp acceptance; quét179file source/docs/evidence không thấy giá trị secrets local |
+
+Các runs thuộc bộ accept cuối:
+
+| Case | Airflow ID / UUID | Spark applications |
+|---|---|---|
+| Normal | day5_20261102T035512968050Z / ba461311-4431-5f9a-91c5-a417bd4ab049 | app-20261102035528-0002 |
+| Partial/retry/replay | day5_20261102T035600722956Z / 750b5d3a-a308-5e6c-b35a-441b7d79577d | app-20261102035618-0003 → app-20261102035717-0004 |
+| All-invalid | day5_20261102T035815525729Z / 6828e63e-5cf5-5c97-8c40-e692391e517f | app-20261102035835-0005 → app-20261102035948-0006 |
+| System failure | day5_20261102T040013448216Z / 7f21f478-16ed-547b-96ce-353df32aa590 | app-20261102040035-0007 → app-20261102040130-0008 |
+| Web/replay | day5_20261102T040155081651Z / 745516b3-39c8-57a5-9fcb-04abdc94fd8b | app-20261102040216-0009 |
+
+Transaction clone UUID1d1d6a64-06c4-4002-b718-c579c0ea576e dùng originating app,
+job_name `test_day2.transaction_snapshot_copy`, không giả một Spark execution mới.
+Các run thử trước bộ accept cuối được giữ riêng; một lần accept dừng ở phép thử
+DELETE join view (55000), đã sửa test sang bảng demo gốc để kiểm đúng42501.
+
+Bằng chứng: [permissions](docs/evidence/day5/permissions.json),
+[transaction](docs/evidence/day5/transaction-tests.txt),
+[query observer](docs/evidence/day5/lineage-psql.txt),
+[runtime](docs/evidence/day5/runtime.json), [images](docs/evidence/day5/images.json),
+[environment](docs/evidence/day5/environment.json),
+[web Bronze](docs/evidence/day5/web-bronze-output.json),
+[kiểm tra tĩnh](docs/evidence/day5/static-checks.json),
+[smoke regression](docs/evidence/day5/smoke-regression.json).
+Mỗi run có initial/report.json, sql-output.json, task/executor logs,
+observer-lineage.json; partial có retry-incomplete.json và replay/, web có replay/.
+Evidence Git ignore; code/tests/runner tái tạo được. Các DAG đỏ là negative tests.
+Smoke bổ sung: day1_20261102T040348145702Z,
+UUIDb930c5c3-a042-5d3c-a26c-3bed5eff1f33; report/task/executor/SQL tại
+docs/evidence/day1/day1_20261102T040348145702Z/. Con trỏ day1/latest.json hiện trỏ
+lần regression này; các report ngày1 cũ vẫn giữ nguyên, không dùng làm bằng chứng ngày5.
+
+**Không có blocker/thao tác thủ công bắt buộc.** Stack hiện giữ chạy, volumes và
+secrets cũ. Docker Linux/x86_64,4CPU/RAM8330498048bytes. Image thực driver/worker:
+`sha256:c58044bb8b3c60b8d84ec5b0816515a581a201bdaba8d0f2c8845dfa46ed0fdc`.
+Sandbox exec lỗi setup refresh; require_escalated được auto-review chấp thuận,
+không sửa ACL/settings/reset dữ liệu. Chưa commit/push.
+
+```powershell
+Set-Location D:\VCB\data-simulation
+docker compose up -d --no-build --wait --wait-timeout 360
+python scripts/day5.py migrate
+python scripts/day5.py run --case mixed
+python scripts/day5.py accept
+$day5 = Get-Content docs/evidence/day5/latest.json -Raw | ConvertFrom-Json
+python scripts/day5.py inspect --run-id $day5.partial_retry_replay_run
+python scripts/check-preparation.py
+python -m compileall -q src dags scripts tests docker/airflow
+git -c safe.directory=D:/VCB/data-simulation diff --check
+```
+
+Dừng giữ dữ liệu: `python scripts/day1.py stop`. Session tiếp theo làm **ngày 6**:
+telemetry/run/task/duration/count/error, callbacks không che lỗi upstream,
+Grafana OSS/datasource observer/dashboard provisioning và kiểm success/error/restart.
+**Ngày 6–7 chưa triển khai**; cold start/restart cả tuần thuộc ngày7 dùng project/volume riêng.
+
+## Lịch sử ngày 4 — nghiệm thu PASS
 
 **Ngày 1–4 PASS.** `python scripts/day4.py accept` kết thúc exit0 lúc
 **23:37:23 ngày 2026-11-01 Asia/Saigon**. Báo cáo cuối:

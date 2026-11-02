@@ -1,4 +1,4 @@
-# Proposed catalog records; registration code is implemented on day 5.
+# Versioned catalog registered by init-lab; runtime pins its canonical SHA-256.
 schema_version: "1.0.0"
 datasets:
   - dataset_name: bronze.web_pages

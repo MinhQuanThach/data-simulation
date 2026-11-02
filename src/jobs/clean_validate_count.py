@@ -11,6 +11,7 @@ from src.common.pipeline import check_versions, locked_run, validate_staging
 from src.common.smoke import master_state
 from src.common.transform import TRANSFORM_VERSION
 from src.common.quality import classify, load_rules, record_check
+from src.common.catalog import pin_catalog, record_lineage
 
 
 def main():
@@ -44,6 +45,7 @@ def main():
         try:
             rules, rules_hash = load_rules()
             with conn, conn.cursor() as cur:
+                pin_catalog(cur, run_id)
                 cur.execute('SELECT rules_sha256 FROM metadata.pipeline_runs WHERE run_id=%s::uuid', (run_id,))
                 old_hash = cur.fetchone()[0]
                 if old_hash is not None and old_hash != rules_hash:
@@ -58,6 +60,7 @@ def main():
             print(f"CLEAN_SPARK_START run_id={run_id} attempt_id={attempt} application_id={app_id}", flush=True)
             with conn, conn.cursor() as cur:
                 cur.execute("UPDATE metadata.pipeline_runs SET spark_application_id=%s WHERE run_id=%s::uuid", (app_id, run_id))
+                record_lineage(cur, run_id, attempt, 'running')
             props = {"user": os.environ["SPARK_DB_USER"], "password": os.environ["SPARK_DB_PASSWORD"],
                      "driver": "org.postgresql.Driver"}
             jdbc_url = f"jdbc:postgresql://{os.environ['LAB_DB_HOST']}:{os.environ.get('LAB_DB_PORT', '5432')}/{os.environ['LAB_DB_NAME']}"
@@ -138,6 +141,9 @@ def main():
                     WHERE run_id=%s::uuid AND active_attempt=%s""", (input_count, total_tokens, run_id, attempt))
                 if cur.rowcount != 1:
                     raise RuntimeError("Stale Spark attempt cannot complete staging")
+                record_lineage(cur, run_id, attempt, 'staged', {
+                    'silver.documents': valid_count, 'demo.word_counts': counts.count(),
+                    'quarantine.rejected_pages': len(rejected)})
             print(f"CLEAN_SPARK_SUCCESS run_id={run_id} attempt_id={attempt} application_id={app_id} "
                   f"input_count={input_count} total_tokens={total_tokens}", flush=True)
         except Exception as error:
@@ -153,6 +159,7 @@ def main():
                     quality_status=CASE WHEN quality_status='all_invalid' THEN quality_status ELSE 'system_failure' END,
                     staging_complete=false,error_summary=%s WHERE run_id=%s::uuid AND active_attempt=%s""",
                     (summary[:500], run_id, attempt))
+                record_lineage(cur, run_id, attempt, 'failed')
             raise
         finally:
             if spark is not None:

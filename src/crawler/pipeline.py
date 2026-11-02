@@ -12,6 +12,7 @@ from src.common.smoke import connect, master_state, run_uuid
 from src.common.transform import RULES_VERSION, TRANSFORM_VERSION
 from src.crawler.config import page_id, validate_input
 from src.crawler.http import Crawler
+from src.common.catalog import pin_catalog
 
 
 def validate_config(dag_id, airflow_run_id, **context):
@@ -39,6 +40,7 @@ def crawl_to_bronze(config, dag_id, airflow_run_id, **context):
                 FROM metadata.pipeline_runs WHERE run_id=%s::uuid FOR UPDATE""", (run_id,))
             row = cur.fetchone()
             check_versions(row)
+            pin_catalog(cur, run_id)
             persisted = row[3]
             if persisted is not None:
                 persisted = dict(persisted, fail_always=persisted.get('fail_always', False))
@@ -77,8 +79,9 @@ def crawl_to_bronze(config, dag_id, airflow_run_id, **context):
                     crawler.close()
         # If the process dies between commits, the next attempt validates/reuses
         # the whole Bronze transaction above, without making fresh HTTP requests.
-        with control, control.cursor() as cur:
-            cur.execute("UPDATE metadata.pipeline_runs SET crawl_complete=true WHERE run_id=%s::uuid", (run_id,))
+        if not row[4]:
+            with control, control.cursor() as cur:
+                cur.execute("UPDATE metadata.pipeline_runs SET crawl_complete=true WHERE run_id=%s::uuid", (run_id,))
     return {"run_id": run_id, "mode": "web", "top_n": config["top_n"],
             "fail_once": config["fail_once"], 'fail_always': config.get('fail_always', False), "input_count": config["unique_input_count"]}
 

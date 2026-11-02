@@ -1,6 +1,62 @@
 # Context chuyển session
 
-## Session ngày 4 hiện tại — đã hoàn thành, PASS (2026-11-01)
+## Session ngày 5 — đã hoàn thành, PASS (2026-11-02)
+
+Yêu cầu: đọc toàn bộ đặc tả/Markdown/repo, triển khai ngày 5 thực sự, chỉ báo
+hoàn thành có bằng chứng; cập nhật CONTEXT/PLAN/STATUS. Chưa yêu cầu commit/push.
+**Ngày 1–5 PASS**, `python scripts/day5.py accept` exit0 lúc **11:03:38 Asia/Saigon**,
+docs/evidence/day5/latest.json. Ngày 6–7 chưa triển khai. Không có AGENTS.md áp dụng;
+Git đầu session sạch. Code/config fingerprints không đổi trong bộ accept cuối.
+
+Code mới: migration005, catalog.py, day5.py, test_day5.py, day5_lineage.sql,
+docs/day5.md. Init tạo/cấp bốn role crawler/job/publisher/observer, thu hồi quyền
+ghi public của Spark; publisher kết nối riêng. Guard trigger chặn job giả published.
+Crawler INSERT/SELECT chỉ Bronze (SELECT cho snapshot replay); control dùng job
+identity riêng. Scheduler chỉ có crawler/job/publisher; admin/observer ở lab-init.
+Catalog schema1.0.0, canonical JSON SHA256, immutable dataset definitions theo version;
+metadata.datasets/catalog_versions và run catalog hash. Lineage giữ từng attempt,
+app-ID thật, input/job/output, versions/hashes, status/counts. Publish commit lineage
+cùng Silver/demo/run flag, exact replay không sửa history. Không backfill runs cũ.
+
+Docker Linux/x86_64 CPU4/RAM8330498048, Engine29.5.2. Stack đầu session dừng;
+đã up lại giữ volumes/secrets, 7 services healthy. Giữ pins/image c58044...fdc,
+không build/thêm dependency/service. Sandbox exec vẫn lỗi setup refresh;
+require_escalated được auto-review chấp thuận, không sửa ACL/settings/reset dữ liệu.
+Nghiệm thu:31 unit Linux PASS;57 permission probes (13allow/44deny42501) với TCP/
+password từng identity, không superuser/membership. Catalog đăng ký lại giữ nguyên,
+drift cùng version bị chặn. Atomic publish rollback/visibility gồm lineage PASS.
+Normal12tokens/8words; partial5=1+4 retry thật/up_for_retry/publish blocked rồi success;
+exact fixture/web replay giữ data/lineage/timestamps/app. All-invalid5=0+5 và system
+failure cả2attempts đều DAGfailed/publicrows0, giữ failed attempt lineage. Web thật
+example.comHTTP200+404:2=1+1,25tokens; bytes/HTML ở evidence, không recrawl khi replay.
+Runtime/pip/JDBC driver/worker khớp,7/7healthy. Environment evidence xác nhận không
+admin/observer trong scheduler,không DB credentials trong worker environment.
+Smoke regression ngày1 đủ3task/standalone/JDBC PASS, UUIDb930c5c3-a042-5d3c-a26c-3bed5eff1f33;
+day1/latest hiện trỏ lần regression, lịch sử reports vẫn giữ nguyên. Preparation/
+compileall/Compose/diff PASS; source hashes khớp; quét179file không thấy secrets local.
+
+UUIDs cuối: normal ba461311-4431-5f9a-91c5-a417bd4ab049;
+partial/retry/replay750b5d3a-a308-5e6c-b35a-441b7d79577d;
+all-invalid6828e63e-5cf5-5c97-8c40-e692391e517f;
+system7f21f478-16ed-547b-96ce-353df32aa590;
+web745516b3-39c8-57a5-9fcb-04abdc94fd8b. Airflow/app IDs tại STATUS và
+docs/evidence/day5/handoff-summary.json. Transaction test clone1d1d6a64-06c4-4002-b718-c579c0ea576e,
+job_name ghi rõ test_snapshot_copy; không coi là Spark execution mới.
+Evidence local Git ignore, gồm permissions/unit/transaction/lineage-psql/runtime/
+images/environment, reports/SQL/task/executor logs/retry/replay/webbytes. Giữ lịch sử ngày1–4.
+
+Không có blocker/thao tác thủ công bắt buộc. Stack giữ chạy và volumes/secrets cũ.
+Lệnh: `python scripts/day5.py migrate`; `python scripts/day5.py run --case mixed`;
+`python scripts/day5.py accept`; `python scripts/day5.py inspect --run-id <UUID>`
+(query observer). Khởi động `docker compose up -d --no-build --wait --wait-timeout 360`;
+dừng giữ dữ liệu `python scripts/day1.py stop`. Xem docs/day5.md và STATUS.
+Session tiếp theo làm **ngày 6**: telemetry thực theo run/task/duration/count/error,
+callbacks không che upstream failure, Grafana OSS pin/recheck manifest trước pull,
+datasource observer chỉ SELECT views cần thiết và dashboard file provisioning;
+chứng minh run success/error khác nhau và restart Grafana tái provision. Ngày7
+cold start/restart cả tuần trên project/volumes riêng vẫn chưa làm. Chưa commit/push.
+
+## Lịch sử session ngày 4 — đã hoàn thành, PASS (2026-11-01)
 
 Nghiệm thu cuối **23:37:23 Asia/Saigon**, [latest.json](docs/evidence/day4/latest.json).
 **Ngày 1–4 PASS; session tiếp theo làm ngày 5. Ngày 5–7 chưa triển khai.**

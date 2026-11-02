@@ -94,6 +94,10 @@ services:
       CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
       SPARK_DB_USER: ${SPARK_DB_USER}
       SPARK_DB_PASSWORD: ${SPARK_DB_PASSWORD}
+      PUBLISHER_DB_USER: ${PUBLISHER_DB_USER}
+      PUBLISHER_DB_PASSWORD: ${PUBLISHER_DB_PASSWORD}
+      OBSERVER_DB_USER: ${OBSERVER_DB_USER}
+      OBSERVER_DB_PASSWORD: ${OBSERVER_DB_PASSWORD}
     depends_on:
       lab-db: {condition: service_healthy}
 
@@ -131,6 +135,8 @@ services:
       CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
       SPARK_DB_USER: ${SPARK_DB_USER}
       SPARK_DB_PASSWORD: ${SPARK_DB_PASSWORD}
+      PUBLISHER_DB_USER: ${PUBLISHER_DB_USER}
+      PUBLISHER_DB_PASSWORD: ${PUBLISHER_DB_PASSWORD}
     depends_on:
       airflow-api-server: {condition: service_healthy}
       lab-init: {condition: service_completed_successfully}

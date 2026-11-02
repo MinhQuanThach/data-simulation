@@ -1,11 +1,16 @@
 # Kiến trúc đã chọn cho baseline
 
+Ngày 5 tách publisher identity khỏi job và observer chỉ đọc views/metadata được
+cấp; catalog được đăng ký từ config và lineage theo từng Spark attempt. Publish
+lineage/Silver/demo/flag chung transaction. Chi tiết [day5.md](day5.md), nghiệm thu
+tại STATUS. Grafana/telemetry ngày 6 vẫn chưa triển khai.
+
 Sơ đồ là baseline cả tuần. `compose.yaml` bật hai PostgreSQL, Airflow và Spark
 master/worker. Ngày 2 đã có fixture → Spark clean/tokenize/count → staging →
 transaction publish Silver/demo, control metadata tối thiểu và chặn text rỗng.
 Ngày 3 thêm crawler HTTP/robots nhận `urls` từ conf, giữ bytes/HTTP audit riêng ở
 Bronze; cả đầu vào web và fixture dùng chung Spark/publisher. Quality/quarantine
-ngày 4 có tại [day4.md](day4.md); catalog/lineage và Grafana thuộc ngày 5–6.
+ngày 4 có tại [day4.md](day4.md); catalog/lineage tại [day5.md](day5.md), Grafana ngày 6.
 Runtime/kiểm chứng xem [STATUS](../STATUS.md), lệnh xem [day1](day1.md)/[day2](day2.md)/[day3](day3.md).
 
 ```mermaid

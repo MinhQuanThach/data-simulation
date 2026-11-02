@@ -1,5 +1,10 @@
 # Kế hoạch thực hiện
 
+Cập nhật 2026-11-02: **ngày 1–5 đã hoàn thành, nghiệm thu PASS**. Ngày5 accept
+exit0 lúc11:03:38Asia/Saigon:31unit,57permissionprobes, catalog/attempt lineage,
+atomic publish/retry/replay fixture/web, all-invalid/systemfailure và7serviceshealthy.
+Bằng chứng và lệnh tại STATUS/docs/day5.md. **Ngày 6–7 chưa triển khai**.
+
 Cập nhật 2026-11-01: **ngày 1–4 đã hoàn thành, nghiệm thu PASS**. Ngày 2 có fixture
 Bronze → Spark standalone → Silver/demo, oracle 12 tokens/8 từ, retry task thật,
 replay cùng run, rollback transaction và empty/script-only rejection PASS.
@@ -7,7 +12,8 @@ replay cùng run, rollback transaction và empty/script-only rejection PASS.
 Evidence tại [STATUS](STATUS.md), [ngày 1](docs/evidence/day1/latest.json),
 [ngày 2](docs/evidence/day2/latest.json), [ngày 3](docs/evidence/day3/latest.json).
 Ngày 3 nghiệm thu lúc 19:51:30; hai URL thật, multi/dedup, web replay, URL404 không
-publish, fixture regression và targeted Spark retry PASS. **Ngày 5–7 chưa triển khai**.
+publish, fixture regression và targeted Spark retry PASS. Ngày5 đã PASS theo cập
+nhật trên; ngày6–7 chưa triển khai.
 
 Giai đoạn chuẩn bị không tính là ngày 1 hoàn thành. Mỗi ngày trước khi sửa code:
 nêu lại mục tiêu, file dự kiến, tiêu chí xong; cuối ngày cập nhật CONTEXT/STATUS,
@@ -89,11 +95,21 @@ Ngày 4 đã kiểm chứng, accept PASS lúc23:37:23 ngày2026-11-01:
    atomic rollback/visibility PASS; 7services healthy/runtime khớp. Giữ evidence ngày1–3;
    cập nhật README/docs/CONTEXT/PLAN/STATUS; latest tại docs/evidence/day4/latest.json.
 
-Ngày 5 tiếp theo (chưa triển khai):
+Ngày 5 đã triển khai và nghiệm thu PASS:
 
-1. Tách publisher connection/credentials/GRANT khỏi Spark; observer readonly;
+1. [x] Tách publisher connection/credentials/GRANT khỏi Spark; observer readonly;
    giữ crawler chỉ ghi Bronze và admin chỉ seed/migration.
-2. Đồng bộ datasets/schema/owner từ config và lineage Bronze→Spark app→Silver/demo
+2. [x] Đồng bộ datasets/schema/owner từ config và lineage Bronze→Spark app→Silver/demo
    theo run_id, transform/rules version/hash và publish status.
-3. Test allow/deny thật bằng mỗi role; query lineage một run đã publish.
-4. Cập nhật tài liệu/bằng chứng; không đánh dấu monitoring/ngày6 hoặc cold-start/ngày7 xong sớm.
+3. [x] 57 allow/deny probes bằng mỗi role; query observer thật;31unit; lineage failed/
+   staged/published theo attempt; rollback/visibility, retry/replay fixture/web PASS.
+4. [x] Cập nhật tài liệu/bằng chứng/CONTEXT/PLAN/STATUS. Không đánh dấu ngày6–7 xong.
+
+Ngày 6 tiếp theo:
+
+1. Tạo telemetry thật (run/task status, duration, input/valid/rejected/tokens/error)
+   gắn Airflow/run/Spark app; callbacks không che upstream failure.
+2. Xác minh lại Grafana OSS pin/manifest trước pull, thêm service/datasource observer
+   chỉ đọc telemetry/demo/metadata cần thiết; provision dashboard bằng files.
+3. Chứng minh run success/error hiển thị khác nhau, truy theo run_id, restart Grafana
+   giữ/tái provision dashboard. Cập nhật evidence và handoff, chưa nghiệm thu ngày7.
